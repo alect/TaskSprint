@@ -29,3 +29,19 @@ func call(srv string, rpcname string, args interface{}, reply interface{}) bool 
 	return false
 } 
 
+func (ck *Clerk) Query() View { 
+	for { 
+		// try each known server. 
+		for _, srv := range ck.servers { 
+			args := &QueryArgs{}
+			var reply QueryReply
+			ok := call(srv, "Coordinator.Query", args, &reply)
+			if ok { 
+				return reply.View
+			} 
+		}
+		time.Sleep(100 * time.Millisecond)
+	} 
+	return View{}
+} 
+
