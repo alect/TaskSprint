@@ -22,9 +22,13 @@ type Coordinator struct {
 	
 	currentView View // The most recent view we're aware of
 
-	isLeader bool // Whether this peer is currently the leader 
+	leaderID int // The id of the current leader. == me if we're the leader
 	leaderNum int // The current leader number (not a leader id.)
 	currentSeq int // The current sequence number (so we don't replay old log entries)
+
+	// This state is unique to each replica 
+	// Used to determine when replicas will attempt to elect a new leader
+	lastLeaderElection time.Time
 } 
 
 const (
@@ -34,6 +38,8 @@ const (
 	LEADER_CHANGE = 3
 	NIL = -1
 )
+
+const ELECTION_INTERVAL = 5 * time.Second
 
 type PaxosReply struct { 
 	View View
@@ -45,6 +51,8 @@ type Op struct {
 	CID ClientID 
 	TID TaskID 
 	DoneValues map[string]interface{}
+	LeaderNum int
+	LeaderID int
 } 
 
 func opsEqual(op1 Op, op2 Op) bool { 
@@ -95,7 +103,13 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 	} else if op.Op == TICK { 
 		// TODO: Handle ticks to see if Some clients should be considered dead
 	} else if op.Op == LEADER_CHANGE { 
-		// TODO: Handle a leader change 
+		// Handle a leader change 
+		// Only change leaders if the new leader is new
+		if op.LeaderNum > co.leaderNum { 
+			co.leaderNum = op.LeaderNum
+			co.leaderID = op.LeaderID
+			co.lastLeaderElection = time.Now()
+		}
 	} 
 	return co.currentView
 } 
@@ -133,6 +147,32 @@ func (co *Coordinator) PerformPaxos(op Op) View {
 		} 
 	} 
 	return View{}
+} 
+
+// Used to change leaders and to update the view of who's dead if we're the leader 
+func (co *Coordinator) tick() { 
+	// First, see if it's time to elect a new leader 
+	co.mu.Lock() 
+	shouldElectNewLeader := time.Since(co.lastLeaderElection) >= ELECTION_INTERVAL
+	nextLeaderNum := co.leaderNum+1
+	co.mu.Unlock() 
+
+	if shouldElectNewLeader { 
+		leaderOp := Op { Op: LEADER_CHANGE, LeaderNum: nextLeaderNum, LeaderID: co.me }
+		co.PerformPaxos(leaderOp)
+	} 
+
+	// See if we need to insert a tick 
+	co.mu.Lock() 
+	shouldInsertTick := co.leaderID == co.me
+	leaderID := co.leaderID
+	leaderNum := co.leaderNum
+	co.mu.Unlock()
+
+	if shouldInsertTick { 
+		tickOp := Op { Op: TICK, LeaderNum: leaderNum, LeaderID: leaderID }
+		co.PerformPaxos(tickOp)
+	} 
 } 
 
 
@@ -213,6 +253,13 @@ func StartServer(servers []string, me int) *Coordinator {
 			} 
 		} 
 	}() 
+
+	go func() { 
+		for !co.dead { 
+			co.tick()
+			time.Sleep(250 * time.Millisecond)
+		} 
+	} 
 
 	return co
 } 
