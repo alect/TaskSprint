@@ -78,9 +78,18 @@ class TestPythonLibrary(unittest.TestCase):
     self.assertTrue("invalid" in result["error"])
     self.assertTrue("param" in result["error"])
     self.assertTrue("count" in result["error"])
+    result = runTask("multiply", [])
+    self.assertTrue("error" in result)
+    self.assertTrue("invalid" in result["error"])
+    self.assertTrue("param" in result["error"])
+    self.assertTrue("count" in result["error"])
 
   def test_invalid_data(self):
     result = runTask("multiply", "nothing")
+    self.assertTrue("error" in result)
+    self.assertTrue("data" in result["error"])
+    self.assertTrue("format" in result["error"])
+    result = runTask("multiply", 1)
     self.assertTrue("error" in result)
     self.assertTrue("data" in result["error"])
     self.assertTrue("format" in result["error"])
