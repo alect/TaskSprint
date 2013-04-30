@@ -8,13 +8,15 @@ type Clerk struct {
 	servers []string // Coordinator replicas 
 	me string // How to contact this client 
 	clerkID ClientID 
+	numNodes int
 }
 
-func MakeClerk(servers[]string, me string) *Clerk { 
+func MakeClerk(servers[]string, me string, numNodes int) *Clerk { 
 	ck := new(Clerk)
 	ck.servers = servers 
 	ck.me = me 
 	ck.clerkID = ClientID(rand.Int63())
+	ck.numNodes = numNodes
 	return ck
 } 
 
@@ -38,7 +40,7 @@ func (ck *Clerk) Query() View {
 	for { 
 		// try each known server. 
 		for _, srv := range ck.servers { 
-			args := &QueryArgs{ CID: ck.clerkID, Contact: ck.me }
+			args := &QueryArgs{ CID: ck.clerkID, Contact: ck.me, NumNodes: ck.numNodes }
 			var reply QueryReply
 			ok := call(srv, "Coordinator.Query", args, &reply)
 			if ok { 
@@ -55,7 +57,7 @@ func (ck *Clerk) Done(TID TaskID, DoneValues map[string]interface{}) {
 		for _, srv := range ck.servers { 
 			args := &DoneArgs { ck.clerkID, TID, DoneValues} 
 			var reply DoneReply
-			ok := call(srv, "Coordinator.Done", args, &reply) 
+			ok := call(srv, "Coordinator.TaskDone", args, &reply) 
 			if ok { 
 				return
 			} 

@@ -20,7 +20,7 @@ type Coordinator struct {
 	unreliable bool // For testing 
 	px *paxos.Paxos
 
-	
+	seed int64 // The random seed we share across all replicas
 
 	dc DeveloperCoord // For performing callbacks. This is the developer defined object
 	
@@ -76,6 +76,7 @@ type Op struct {
 	DoneValues map[string]interface{}
 	LeaderNum int
 	LeaderID int
+	NumNodes int
 } 
 
 // Have this function just so we don't compare the DoneValues when comparing log entries
@@ -130,6 +131,12 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 		return co.currentView
 	} 
 	co.currentSeq = seq 
+	// First, see if we need to initialize everything 
+	if !co.initialized { 
+		co.dc.Init(co, co.seed) 
+		co.initialized = true
+	} 
+
 	if op.Op == QUERY { 
 		// See if the client is new and assign tasks as appropriate
 		_, exists := co.lastQueries[op.CID] 
@@ -151,11 +158,6 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 		co.availableClients[op.CID] = true
 		co.AllocateTasks()
 	} else if op.Op == TICK { 
-		// First, see if we need to initialize everything 
-		if !co.initialized { 
-			co.dc.Init(co) 
-			co.initialized = true
-		} 
 		// Handle ticks to see if Some clients should be considered dead
 		for clientID, ticks := range co.lastQueries { 
 			if ticks+1 == DEAD_TICKS { 
@@ -332,7 +334,7 @@ func (co *Coordinator) KillTask(tid TaskID) {
 	co.killedTasks[tid] = true
 }
 
-func (co *Coordinator) Finished(outputTasks []TaskID) { 
+func (co *Coordinator) Finish(outputTasks []TaskID) { 
 	// When we're completely done 
 	co.isFinished = true 
 	co.outputTasks = outputTasks
@@ -347,7 +349,7 @@ func (co *Coordinator) Kill() {
 } 
 
 
-func StartServer(servers []string, me int, dc DeveloperCoord, numTaskReplicas int) *Coordinator { 
+func StartServer(servers []string, me int, dc DeveloperCoord, numTaskReplicas int, seed int64) *Coordinator { 
 	gob.Register(Op{})
 
 	co := new(Coordinator)
@@ -361,6 +363,7 @@ func StartServer(servers []string, me int, dc DeveloperCoord, numTaskReplicas in
 	co.lastQueries = map[ClientID]int{}
 	co.lastLeaderElection = time.Now()
 
+	co.seed = seed
 	co.numTaskReplicas = numTaskReplicas
 	co.unassignedTasks = make([]TaskID, 0)
 	co.availableClients = map[ClientID]bool{}
