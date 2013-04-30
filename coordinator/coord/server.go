@@ -20,6 +20,8 @@ type Coordinator struct {
 	unreliable bool // For testing 
 	px *paxos.Paxos
 
+	
+
 	dc *DeveloperCoord // For performing callbacks. This is the developer defined object
 	
 	currentView View // The most recent view we're aware of
@@ -28,12 +30,25 @@ type Coordinator struct {
 	leaderNum int // The current leader number (not a leader id.)
 	currentSeq int // The current sequence number (so we don't replay old log entries)
 
+	nextTID TaskID // The next task ID we'll assign to a task
+
 	// How long it's been since we last heard from a client in number of ticks
 	lastQueries map[ClientID]int 
 
 	// This state is unique to each replica 
 	// Used to determine when replicas will attempt to elect a new leader
 	lastLeaderElection time.Time
+
+	// Used for task allocation 
+	numTaskReplicas int // The number of replicas we make of each task. 
+	unassignedTasks []TaskID
+	availableClients map[ClientID]bool
+	killedTasks map[TaskID]bool // Dead tasks that we shouldn't assign
+
+	// Output info for when the task is done 
+	isFinished bool 
+	outputTasks []TaskID
+
 } 
 
 const (
@@ -120,35 +135,40 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 		_, exists := co.lastQueries[op.CID] 
 		if !exists { 
 			// new client event 
-			co.dc.ClientJoined(op.CID)
+			co.availableClients[CID] = true
+			co.dc.ClientJoined(co, op.CID)
 		} 
 		co.lastQueries[op.CID] = 0
 		// Update our view of how to contact the client 
 		co.currentView.ClientInfo[op.CID] = op.Contact
-
+		co.AllocateTasks()
 		// Clone the current view for queries so concurrency doesn't affect it 
 		return cloneView(co.currentView)
 	} else if op.Op == DONE { 
 		// Handle finished tasks 
-		co.dc.TaskDone(op.TID, op.DoneValues)
+		co.dc.TaskDone(co, op.TID, op.DoneValues)
+		// This client is now available 
+		co.availableClients[op.CID] = true
+		co.AllocateTasks()
 	} else if op.Op == TICK { 
 		// First, see if we need to initialize everything 
 		if !co.initialized { 
-			co.dc.Init() 
+			co.dc.Init(co) 
 			co.initialized = true
 		} 
 		// Handle ticks to see if Some clients should be considered dead
 		for clientID, ticks := range co.lastQueries { 
 			if ticks+1 == DEAD_TICKS { 
 				// Dead client event 
-				co.dc.ClientDead(clientID)
+				co.ClientDead(clientID)
+				co.dc.ClientDead(co, clientID)
 			} 
 			co.lastQueries[clientID]++
 		} 
-
+		co.AllocateTasks()
 	} else if op.Op == LEADER_CHANGE { 
 		// Handle a leader change 
-		// Only change leaders if the new leader is new
+		// Only change leaders if the new leader is actually new
 		if op.LeaderNum > co.leaderNum { 
 			co.leaderNum = op.LeaderNum
 			co.leaderID = op.LeaderID
@@ -219,6 +239,56 @@ func (co *Coordinator) tick() {
 	} 
 } 
 
+// Called automatically to allocate tasks to clients as clients become available
+func (co *Coordinator) AllocateTasks() { 
+	// Go through each of our available clients and attempt to allocate a task 
+	for CID := range co.availableClients { 
+		if len(co.unassignedTasks) == 0 { 
+			return
+		} 
+		// Look for an unassignedTask that we can pull out of the slice 
+		var i int 
+		for i = 0; i < len(co.unassignedTasks); i++ { 
+			_, killed := co.killedTasks[co.unassignedTasks[i]] 
+			if !killed { 
+				break
+			} 
+		} 
+		if i < len(co.unassignedTasks) { 
+			tid := co.unassignedTasks[i]
+			append(co.currentView.TaskAssignments[tid], CID)
+			delete(co.availableClients, CID)
+		} 
+		// Shorten the slice
+		co.unassignedTasks = co.unassignedTasks[i+1:]
+	} 
+} 
+
+// When a client dies, have to remove it from the view and possibly 
+// re-assign its tasks 
+func (co *Coordinator) ClientDead(CID ClientID) { 
+	// First, this client is not available 
+	delete(co.availableClients, CID) 
+	// Now, find tasks this client is responsible for and remove the client 
+	for tid, clients := range co.currentView.TaskAssignments { 
+		foundClient := false 
+		newAsst := make([]ClientID, 0)
+		for _, client := range clients { 
+			if client == CID { 
+				foundClient = true 
+			} else { 
+				append(newAsst, client)
+			} 
+		} 
+		if foundClient { 
+			co.currentView.TaskAssignments[tid] = newAsst
+			// reassign this task?
+			append(co.currentView.unassignedTasks, tid)
+		} 
+	} 
+
+} 
+
 
 // RPC functions 
 
@@ -240,18 +310,33 @@ func (co *Coordinator) TaskDone(args *DoneArgs, reply *DoneReply) error {
 
 // Functions called by the developer coordinator to manage tasks 
 func (co *Coordinator) StartTask(params TaskParams) TaskID { 
-	// TODO: Implement the function that starts a task 
-	return 0
+	// Function that starts a task 
+	tid = co.nextTID
+	co.nextTID++
+	co.currentView.TaskParams[tid] = params
+	co.currentView.TaskAssignments[tid] = make([]ClientID, 0)
+	// Add this task to a list of unassigned tasks 
+	// It will be assigned to clients as appropriate
+	for i := 0; i < co.numTaskReplicas; i++ { 
+		append(co.unassignedTasks, tid)
+	} 
+	return tid
 } 
 
 func (co *Coordinator) KillTask(tid TaskID) { 
-	// TODO: Implement the killing function 
+	// Kills a task by removing its assignment from the view 
+	// Can be used to allow clients to discard data that's no longer needed 
+	delete(co.currentView.TaskParams, tid)
+	delete(co.currentView.TaskAssignments, tid)
+	// Add it to the map of killed tasks so we don't assign it again 
+	co.killedTasks[tid] = true
 }
 
 func (co *Coordinator) Finished(outputTasks []TaskID) { 
-	// TODO: Implement the finishing function 
+	// When we're completely done 
+	co.isFinished = true 
+	co.outputTasks = outputTasks
 }  
-
 
 
 // For testing purposes 
@@ -262,7 +347,7 @@ func (co *Coordinator) Kill() {
 } 
 
 
-func StartServer(servers []string, me int, dc DeveloperCoord) *Coordinator { 
+func StartServer(servers []string, me int, dc *DeveloperCoord, numTaskReplicas int) *Coordinator { 
 	gob.Register(Op{})
 
 	co := new(Coordinator)
@@ -273,8 +358,15 @@ func StartServer(servers []string, me int, dc DeveloperCoord) *Coordinator {
 	co.leaderID = 0
 	co.leaderNum = 0	
 	co.currentSeq = -1
-	co.lastQueries = map[ClientID]int
+	co.lastQueries = map[ClientID]int{}
 	co.lastLeaderElection = time.Now()
+
+	co.numTaskReplicas = numTaskReplicas
+	co.unassignedTasks = make([]TaskID, 0)
+	co.availableClients = map[ClientID]bool{}
+	co.killedTasks = map[TaskID]bool{}
+
+	co.isFinished = false
 
 	rpcs := rpc.NewServer()
 	rpcs.Register(co)

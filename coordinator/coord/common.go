@@ -5,10 +5,10 @@ type TaskID int64
 
 // The interface implemented by a developer coordinator 
 type DveloperCoord interface { 
-	Init()
-	ClientJoined(CID ClientID) 
-	ClientDead(CID ClientID) 
-	TaskDone(TID TaskID, DoneValues map[string]interface{})
+	Init(co *Coordinator)
+	ClientJoined(co *Coordinator, CID ClientID) 
+	ClientDead(co *Coordinator,  CID ClientID) 
+	TaskDone(co *Coordinator, TID TaskID, DoneValues map[string]interface{})
 } 
 
 type View struct { 
