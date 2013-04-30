@@ -1,10 +1,41 @@
 #!/usr/bin/python
-import unittest, threading, json, subprocess, socket, time
+import unittest, threading, json, subprocess, socket, time, jsonpickle
+import datetime
+
+class Person(object):
+  def __init__(self, name, age):
+    self.name = name
+    self.age = age
+
+  def year_born(self):
+    return datetime.date.today().year - self.age - 1
+
+  def first_name(self):
+    return self.name.split(" ")[0]
+
+  def last_name(self):
+    return self.name.split(" ")[1]
 
 def start_sub_proc():
   subprocess.call(["./testNode.py", "socket"]) 
 
+def pickleobjects(data):
+  if hasattr(data, '__module__') and data.__module__ != "__builtin__":
+    return jsonpickle.encode(data)
+  return data
+
+def unpickle(data_dict):
+  if type(data_dict) != dict:
+    return data_dict
+  for key in data_dict:
+    d = data_dict[key]
+    if type(d) == unicode and "py/object" in d:
+      data_dict[key] = jsonpickle.decode(d)
+  return data_dict
+
 def runTask(name, data = []):
+  if type(data) == list:
+    data = map(pickleobjects, data)
   s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
   s.connect("socket")
   s.send(json.dumps([name, data]))
@@ -12,7 +43,7 @@ def runTask(name, data = []):
   if name != "kill":
     data = s.recv(4096)
   s.close()
-  return json.loads(data)
+  return unpickle(json.loads(data))
 
 class TestPythonLibrary(unittest.TestCase):
   @classmethod
@@ -93,6 +124,26 @@ class TestPythonLibrary(unittest.TestCase):
     self.assertTrue("error" in result)
     self.assertTrue("data" in result["error"])
     self.assertTrue("format" in result["error"])
+
+  def test_returned_object(self):
+    result = runTask("person", ["Sergio Benitez", 21])
+    self.assertTrue("person" in result)
+    person = result["person"]
+    self.assertEqual(person.name, "Sergio Benitez")
+    self.assertEqual(person.age, 21)
+    self.assertEqual(person.first_name(), "Sergio")
+    self.assertEqual(person.last_name(), "Benitez")
+    self.assertEqual(person.year_born(), 1991)
+
+  def test_new_object(self):
+    result = runTask("detail_person", [Person("Sergio Benitez", 21)])
+    self.assertDictEqual(result, {
+      "name" : "Sergio Benitez",
+      "age" : 21,
+      "first_name" : "Sergio",
+      "last_name" : "Benitez",
+      "year_born" : 1991,
+    })
 
 if __name__ == '__main__':
   unittest.main()

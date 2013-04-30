@@ -1,4 +1,5 @@
 #!/usr/bin/python
+from tests import Person # for testing only
 from TaskSprintNode import *
 
 class TestNode(TaskSprintNode):
@@ -18,5 +19,16 @@ class TestNode(TaskSprintNode):
   def multiply(self, x, y):
     return {"result": x * y}
 
+  def person(self, name, age):
+    return {"person": Person(name, age)}
+
+  def detail_person(self, person):
+    result = {}
+    result["name"] = person.name
+    result["age"] = person.age
+    result["first_name"] = person.first_name()
+    result["last_name"] = person.last_name()
+    result["year_born"] = person.year_born()
+    return result
 
 TestNode().start()
