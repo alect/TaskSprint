@@ -46,11 +46,11 @@ func TestSimple(t *testing.T) {
 		coa[i] = StartServer(kvh, i, sca[i], numTaskReplicas)
 	} 
 	
-	ck := MakeClerk(kvh, "test-clerk")
+	/*ck := MakeClerk(kvh, "test-clerk")
 	var cka [nservers]*Clerk 
 	for i := 0; i < nservers; i++ { 
 		cka[i] = MakeClerk([]string{kvh[i]}, "test-clerk")
-	} 
+	} */
 	
 	fmt.Printf("Test: Basic Query\n")
 	

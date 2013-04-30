@@ -22,10 +22,10 @@ type Coordinator struct {
 
 	
 
-	dc *DeveloperCoord // For performing callbacks. This is the developer defined object
+	dc DeveloperCoord // For performing callbacks. This is the developer defined object
 	
 	currentView View // The most recent view we're aware of
-	bool initialized // Whether we've initialized yet. Calls init on first tick if not
+	initialized bool // Whether we've initialized yet. Calls init on first tick if not
 	leaderID int // The id of the current leader. == me if we're the leader
 	leaderNum int // The current leader number (not a leader id.)
 	currentSeq int // The current sequence number (so we don't replay old log entries)
@@ -135,7 +135,7 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 		_, exists := co.lastQueries[op.CID] 
 		if !exists { 
 			// new client event 
-			co.availableClients[CID] = true
+			co.availableClients[op.CID] = true
 			co.dc.ClientJoined(co, op.CID)
 		} 
 		co.lastQueries[op.CID] = 0
@@ -256,7 +256,7 @@ func (co *Coordinator) AllocateTasks() {
 		} 
 		if i < len(co.unassignedTasks) { 
 			tid := co.unassignedTasks[i]
-			append(co.currentView.TaskAssignments[tid], CID)
+			co.currentView.TaskAssignments[tid] = append(co.currentView.TaskAssignments[tid], CID)
 			delete(co.availableClients, CID)
 		} 
 		// Shorten the slice
@@ -277,13 +277,13 @@ func (co *Coordinator) ClientDead(CID ClientID) {
 			if client == CID { 
 				foundClient = true 
 			} else { 
-				append(newAsst, client)
+				newAsst = append(newAsst, client)
 			} 
 		} 
 		if foundClient { 
 			co.currentView.TaskAssignments[tid] = newAsst
 			// reassign this task?
-			append(co.currentView.unassignedTasks, tid)
+			co.unassignedTasks = append(co.unassignedTasks, tid)
 		} 
 	} 
 
@@ -303,7 +303,7 @@ func (co *Coordinator) Query(args *QueryArgs, reply *QueryReply) error {
 // When a client has finished a task 
 func (co *Coordinator) TaskDone(args *DoneArgs, reply *DoneReply) error { 
 	op := Op { Op: DONE, CID: args.CID, TID: args.TID, DoneValues: args.DoneValues }
-	result := co.PerformPaxos(op)
+	co.PerformPaxos(op)
 	return nil
 } 
 
@@ -311,14 +311,14 @@ func (co *Coordinator) TaskDone(args *DoneArgs, reply *DoneReply) error {
 // Functions called by the developer coordinator to manage tasks 
 func (co *Coordinator) StartTask(params TaskParams) TaskID { 
 	// Function that starts a task 
-	tid = co.nextTID
+	tid := co.nextTID
 	co.nextTID++
 	co.currentView.TaskParams[tid] = params
 	co.currentView.TaskAssignments[tid] = make([]ClientID, 0)
 	// Add this task to a list of unassigned tasks 
 	// It will be assigned to clients as appropriate
 	for i := 0; i < co.numTaskReplicas; i++ { 
-		append(co.unassignedTasks, tid)
+		co.unassignedTasks = append(co.unassignedTasks, tid)
 	} 
 	return tid
 } 
@@ -347,7 +347,7 @@ func (co *Coordinator) Kill() {
 } 
 
 
-func StartServer(servers []string, me int, dc *DeveloperCoord, numTaskReplicas int) *Coordinator { 
+func StartServer(servers []string, me int, dc DeveloperCoord, numTaskReplicas int) *Coordinator { 
 	gob.Register(Op{})
 
 	co := new(Coordinator)
@@ -379,7 +379,7 @@ func StartServer(servers []string, me int, dc *DeveloperCoord, numTaskReplicas i
 	if e != nil { 
 		log.Fatal("listen error: ", e)
 	} 
-	sm.l = l
+	co.l = l
 
 	// Code to listen and serve requests
 	go func() { 
@@ -416,7 +416,7 @@ func StartServer(servers []string, me int, dc *DeveloperCoord, numTaskReplicas i
 			co.tick()
 			time.Sleep(250 * time.Millisecond)
 		} 
-	} 
+	} ()
 
 	return co
 } 

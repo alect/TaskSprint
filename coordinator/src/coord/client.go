@@ -6,7 +6,7 @@ import "math/rand"
 
 type Clerk struct { 
 	servers []string // Coordinator replicas 
-	string me // How to contact this client 
+	me string // How to contact this client 
 	clerkID ClientID 
 }
 
@@ -14,7 +14,7 @@ func MakeClerk(servers[]string, me string) *Clerk {
 	ck := new(Clerk)
 	ck.servers = servers 
 	ck.me = me 
-	ck.clerkID = rand.Int63()
+	ck.clerkID = ClientID(rand.Int63())
 	return ck
 } 
 
@@ -50,7 +50,7 @@ func (ck *Clerk) Query() View {
 	return View{}
 } 
 
-func (ck *Clerk) Done(TID TaskID, DoneValues map[string]interface) { 
+func (ck *Clerk) Done(TID TaskID, DoneValues map[string]interface{}) { 
 	for { 
 		for _, srv := range ck.servers { 
 			args := &DoneArgs { ck.clerkID, TID, DoneValues} 

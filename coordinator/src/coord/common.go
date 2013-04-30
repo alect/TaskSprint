@@ -4,7 +4,7 @@ type ClientID int64
 type TaskID int64
 
 // The interface implemented by a developer coordinator 
-type DveloperCoord interface { 
+type DeveloperCoord interface { 
 	Init(co *Coordinator)
 	ClientJoined(co *Coordinator, CID ClientID) 
 	ClientDead(co *Coordinator,  CID ClientID) 
@@ -32,7 +32,7 @@ func cloneView(oldView View) View {
 	for k, v := range oldView.TaskAssignments { 
 		newView.TaskAssignments[k] = v
 	} 
-	newView.ClientInfo = map[ClientID]string 
+	newView.ClientInfo = map[ClientID]string{}
 	for k, v := range oldView.ClientInfo { 
 		newView.ClientInfo[k] = v
 	} 
@@ -63,7 +63,7 @@ type QueryReply struct {
 type DoneArgs struct { 
 	CID ClientID
 	TID TaskID
-	DoneValues map[string]interface // The values corresponding to the requested keys
+	DoneValues map[string]interface{} // The values corresponding to the requested keys
 } 
 
 type DoneReply struct { 
