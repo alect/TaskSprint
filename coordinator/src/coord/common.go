@@ -2,10 +2,11 @@ package coordinator
 
 type ClientID int64
 type TaskID int64
+type NodeID int64
 
 // The interface implemented by a developer coordinator 
 type DeveloperCoord interface { 
-	Init(co *Coordinator)
+	Init(co *Coordinator, seed int64)
 	ClientJoined(co *Coordinator, CID ClientID) 
 	ClientDead(co *Coordinator,  CID ClientID) 
 	TaskDone(co *Coordinator, TID TaskID, DoneValues map[string]interface{})
@@ -46,7 +47,7 @@ type TaskParams struct {
 
 	// The pre-requisite data needed to start this task 
 	PreReqTasks []TaskID 
-	PreReqKey string // The key for the data that should be requested of the pre-req tasks 
+	PreReqKey []string // The key for the data that should be requested of the pre-req tasks 
 	BaseObject interface{} // Some base object for the task to start with 
 } 
 
@@ -54,6 +55,7 @@ type TaskParams struct {
 type QueryArgs struct { 
 	CID ClientID
 	Contact string // How to contact this client. Putting this here because I'm too lazy to figure out how to get it from the socket
+	NumNodes int 
 } 
 
 type QueryReply struct { 
