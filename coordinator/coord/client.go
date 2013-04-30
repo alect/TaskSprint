@@ -2,14 +2,19 @@ package coordinator
 
 import "net/rpc"
 import "time"
+import "math/rand"
 
 type Clerk struct { 
 	servers []string // Coordinator replicas 
+	string me // How to contact this client 
+	clerkID ClientID 
 }
 
-func MakeClerk(servers[]string) *Clerk { 
+func MakeClerk(servers[]string, me string) *Clerk { 
 	ck := new(Clerk)
 	ck.servers = servers 
+	ck.me = me 
+	ck.clerkID = rand.Int63()
 	return ck
 } 
 
@@ -33,7 +38,7 @@ func (ck *Clerk) Query() View {
 	for { 
 		// try each known server. 
 		for _, srv := range ck.servers { 
-			args := &QueryArgs{}
+			args := &QueryArgs{ CID: ck.clerkID, Contact: ck.me }
 			var reply QueryReply
 			ok := call(srv, "Coordinator.Query", args, &reply)
 			if ok { 

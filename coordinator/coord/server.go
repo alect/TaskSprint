@@ -19,15 +19,17 @@ type Coordinator struct {
 	dead bool // For testing 
 	unreliable bool // For testing 
 	px *paxos.Paxos
+
+	dc *DeveloperCoord // For performing callbacks. This is the developer defined object
 	
 	currentView View // The most recent view we're aware of
-
+	bool initialized // Whether we've initialized yet. Calls init on first tick if not
 	leaderID int // The id of the current leader. == me if we're the leader
 	leaderNum int // The current leader number (not a leader id.)
 	currentSeq int // The current sequence number (so we don't replay old log entries)
 
-	// How long it's been since we last heard from a client 
-	lastQueries map[TaskID]int 
+	// How long it's been since we last heard from a client in number of ticks
+	lastQueries map[ClientID]int 
 
 	// This state is unique to each replica 
 	// Used to determine when replicas will attempt to elect a new leader
@@ -52,8 +54,9 @@ type PaxosReply struct {
 
 type Op struct {
 	// A Paxos log entry 
-	Op int
+fun	Op int
 	CID ClientID 
+	Contact string 
 	TID TaskID 
 	DoneValues map[string]interface{}
 	LeaderNum int
@@ -71,7 +74,7 @@ func opsEqual(op1 Op, op2 Op) bool {
 	} else if op1.Op == LEADER_CHANGE { 
 		return op1.LeaderNum == op2.LeaderNum && op1.LeaderID == op2.LeaderID
 	} else if op1.Op == QUERY { 
-		return op1.CID == op2.CID
+		return op1.CID == op2.CID && op1.Contact == op2.Contact
 	} else if op1.Op == DONE { 
 		return op1.CID == op2.CID && op1.TID == op2.TID
 	} 
@@ -116,19 +119,29 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 		// See if the client is new and assign tasks as appropriate
 		_, exists := co.lastQueries[op.CID] 
 		if !exists { 
-			// TODO: new client event 
+			// new client event 
+			co.dc.ClientJoined(op.CID)
 		} 
 		co.lastQueries[op.CID] = 0
+		// Update our view of how to contact the client 
+		co.currentView.ClientInfo[op.CID] = op.Contact
 
 		// Clone the current view for queries so concurrency doesn't affect it 
 		return cloneView(co.currentView)
 	} else if op.Op == DONE { 
-		// TODO: Handle finished tasks 
+		// Handle finished tasks 
+		co.dc.TaskDone(op.TID, op.DoneValues)
 	} else if op.Op == TICK { 
-		// TODO: Handle ticks to see if Some clients should be considered dead
+		// First, see if we need to initialize everything 
+		if !co.initialized { 
+			co.dc.Init() 
+			co.initialized = true
+		} 
+		// Handle ticks to see if Some clients should be considered dead
 		for clientID, ticks := range co.lastQueries { 
 			if ticks+1 == DEAD_TICKS { 
-				// TODO: dead client event 
+				// Dead client event 
+				co.dc.ClientDead(clientID)
 			} 
 			co.lastQueries[clientID]++
 		} 
@@ -211,7 +224,7 @@ func (co *Coordinator) tick() {
 
 // When a client wants the latest view
 func (co *Coordinator) Query(args *QueryArgs, reply *QueryReply) error { 
-	op := Op { Op: QUERY, CID: args.CID }
+	op := Op { Op: QUERY, CID: args.CID, Contact: args.Contact }
 	result := co.PerformPaxos(op)
 	reply.View = result
 	return nil 
@@ -225,6 +238,21 @@ func (co *Coordinator) TaskDone(args *DoneArgs, reply *DoneReply) error {
 } 
 
 
+// Functions called by the developer coordinator to manage tasks 
+func (co *Coordinator) StartTask(params TaskParams) TaskID { 
+	// TODO: Implement the function that starts a task 
+	return 0
+} 
+
+func (co *Coordinator) KillTask(tid TaskID) { 
+	// TODO: Implement the killing function 
+}
+
+func (co *Coordinator) Finished(outputTasks []TaskID) { 
+	// TODO: Implement the finishing function 
+}  
+
+
 
 // For testing purposes 
 func (co *Coordinator) Kill() { 
@@ -234,13 +262,19 @@ func (co *Coordinator) Kill() {
 } 
 
 
-func StartServer(servers []string, me int) *Coordinator { 
+func StartServer(servers []string, me int, dc DeveloperCoord) *Coordinator { 
 	gob.Register(Op{})
 
 	co := new(Coordinator)
 	co.me = me 
-	
+	co.dc = dc 
+	co.currentView = View{map[TaskID]TaskParams{}, map[TaskID][]ClientID{}, map[ClientID]string{}}
+	co.initialized = false
+	co.leaderID = 0
+	co.leaderNum = 0	
 	co.currentSeq = -1
+	co.lastQueries = map[ClientID]int
+	co.lastLeaderElection = time.Now()
 
 	rpcs := rpc.NewServer()
 	rpcs.Register(co)

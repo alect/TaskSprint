@@ -1,8 +1,15 @@
 package coordinator 
 
-
 type ClientID int64
 type TaskID int64
+
+// The interface implemented by a developer coordinator 
+type DveloperCoord interface { 
+	Init()
+	ClientJoined(CID ClientID) 
+	ClientDead(CID ClientID) 
+	TaskDone(TID TaskID, DoneValues map[string]interface{})
+} 
 
 type View struct { 
 	// The struct representing the current view of the system 
@@ -11,7 +18,6 @@ type View struct {
 	// TODO: fill out the view
 	TaskParams map[TaskID]TaskParams
 	TaskAssignments map[TaskID][]ClientID
-	
 	ClientInfo map[ClientID]string // How to contact a particular client. 
 } 
 
@@ -47,6 +53,7 @@ type TaskParams struct {
 
 type QueryArgs struct { 
 	CID ClientID
+	Contact string // How to contact this client. Putting this here because I'm too lazy to figure out how to get it from the socket
 } 
 
 type QueryReply struct { 
@@ -60,5 +67,4 @@ type DoneArgs struct {
 } 
 
 type DoneReply struct { 
-	
 } 
