@@ -34,7 +34,6 @@ func cloneView(oldView View) View {
 } 
 
 type TaskParams struct { 
-	TID TaskID 
 	FuncName string 
 	Seed int64
 	DoneKeys []string 

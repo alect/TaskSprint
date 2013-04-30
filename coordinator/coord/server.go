@@ -26,6 +26,9 @@ type Coordinator struct {
 	leaderNum int // The current leader number (not a leader id.)
 	currentSeq int // The current sequence number (so we don't replay old log entries)
 
+	// How long it's been since we last heard from a client 
+	lastQueries map[TaskID]int 
+
 	// This state is unique to each replica 
 	// Used to determine when replicas will attempt to elect a new leader
 	lastLeaderElection time.Time
@@ -41,6 +44,8 @@ const (
 
 const ELECTION_INTERVAL = 5 * time.Second
 
+const DEAD_TICKS = 10
+
 type PaxosReply struct { 
 	View View
 } 
@@ -55,7 +60,21 @@ type Op struct {
 	LeaderID int
 } 
 
+// Have this function just so we don't compare the DoneValues when comparing log entries
 func opsEqual(op1 Op, op2 Op) bool { 
+	if op1.Op != op2.Op { 
+		return false 
+	} else if op1.Op == NIL { 
+		return true 
+	} else if op1.Op == TICK { 
+		return op1.LeaderNum == op2.LeaderNum && op1.LeaderID == op2.LeaderID
+	} else if op1.Op == LEADER_CHANGE { 
+		return op1.LeaderNum == op2.LeaderNum && op1.LeaderID == op2.LeaderID
+	} else if op1.Op == QUERY { 
+		return op1.CID == op2.CID
+	} else if op1.Op == DONE { 
+		return op1.CID == op2.CID && op1.TID == op2.TID
+	} 
 	return false 
 } 
 
@@ -94,7 +113,12 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 	} 
 	co.currentSeq = seq 
 	if op.Op == QUERY { 
-		// TODO: See if the client is new and assign tasks as appropriate
+		// See if the client is new and assign tasks as appropriate
+		_, exists := co.lastQueries[op.CID] 
+		if !exists { 
+			// TODO: new client event 
+		} 
+		co.lastQueries[op.CID] = 0
 
 		// Clone the current view for queries so concurrency doesn't affect it 
 		return cloneView(co.currentView)
@@ -102,6 +126,13 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 		// TODO: Handle finished tasks 
 	} else if op.Op == TICK { 
 		// TODO: Handle ticks to see if Some clients should be considered dead
+		for clientID, ticks := range co.lastQueries { 
+			if ticks+1 == DEAD_TICKS { 
+				// TODO: dead client event 
+			} 
+			co.lastQueries[clientID]++
+		} 
+
 	} else if op.Op == LEADER_CHANGE { 
 		// Handle a leader change 
 		// Only change leaders if the new leader is new
