@@ -63,7 +63,7 @@ type QueryReply struct {
 type DoneArgs struct { 
 	CID ClientID
 	TID TaskID
-	DoneValues map[string]interface{} // The values corresponding to the requested keys
+	DoneValues map[string]interface // The values corresponding to the requested keys
 } 
 
 type DoneReply struct { 

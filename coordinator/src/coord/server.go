@@ -69,7 +69,7 @@ type PaxosReply struct {
 
 type Op struct {
 	// A Paxos log entry 
-fun	Op int
+	Op int
 	CID ClientID 
 	Contact string 
 	TID TaskID 

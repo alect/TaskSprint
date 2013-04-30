@@ -50,3 +50,17 @@ func (ck *Clerk) Query() View {
 	return View{}
 } 
 
+func (ck *Clerk) Done(TID TaskID, DoneValues map[string]interface) { 
+	for { 
+		for _, srv := range ck.servers { 
+			args := &DoneArgs { ck.clerkID, TID, DoneValues} 
+			var reply DoneReply
+			ok := call(srv, "Coordinator.Done", args, &reply) 
+			if ok { 
+				return
+			} 
+		} 
+		time.Sleep(100 * time.Millisecond)
+	} 
+} 
+

@@ -1,7 +1,6 @@
 package coordinator 
 
 type SimpleCoord struct { 
-	co *Coordinator 
 } 
 
 func (sc *SimpleCoord) Init(co *Coordinator) { 
@@ -18,4 +17,9 @@ func (sc *SimpleCoord) ClientDead(co *Coordinator, CID ClientID) {
 
 func (sc *SimpleCoord) TaskDone(co *Coordinator, TID TaskID, DoneValues map[string]interface{}) { 
 	// TODO: Handle tasks with prerequisites here 
+} 
+
+func MakeSimpleCoord() *SimpleCoord { 
+	sc := new(SimpleCoord)
+	return sc
 } 
