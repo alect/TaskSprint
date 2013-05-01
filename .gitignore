@@ -1,6 +1,9 @@
 .DS_STORE
 */pkg
 
+# My personal notes that shouldn't get committed
+*.note
+
 # GoLang Specific
 # Compiled Object files, Static and Dynamic libs (Shared Objects)
 *.o

@@ -2,7 +2,6 @@ package coordinator
 
 import "net/rpc"
 import "time"
-import "math/rand"
 
 type Clerk struct { 
 	servers []string // Coordinator replicas 
@@ -11,11 +10,11 @@ type Clerk struct {
 	numNodes int
 }
 
-func MakeClerk(servers[]string, me string, numNodes int) *Clerk { 
+func MakeClerk(servers[]string, me string, numNodes int, id ClientID) *Clerk { 
 	ck := new(Clerk)
 	ck.servers = servers 
 	ck.me = me 
-	ck.clerkID = ClientID(rand.Int63())
+	ck.clerkID = id
 	ck.numNodes = numNodes
 	return ck
 } 
@@ -53,16 +52,15 @@ func (ck *Clerk) Query() View {
 } 
 
 func (ck *Clerk) Done(TID TaskID, DoneValues map[string]interface{}) { 
-	for { 
-		for _, srv := range ck.servers { 
-			args := &DoneArgs { ck.clerkID, TID, DoneValues} 
+	for {
+		for _, srv := range ck.servers {
+			args := &DoneArgs { ck.clerkID, TID, DoneValues}
 			var reply DoneReply
-			ok := call(srv, "Coordinator.TaskDone", args, &reply) 
-			if ok { 
+			ok := call(srv, "Coordinator.TaskDone", args, &reply)
+			if ok {
 				return
-			} 
-		} 
+			}
+		}
 		time.Sleep(100 * time.Millisecond)
-	} 
-} 
-
+	}
+}

@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import unittest, threading, json, subprocess, socket, time, jsonpickle
+import unittest, threading, subprocess, socket, time, jsonify
 import datetime
 
 class Person(object):
@@ -19,31 +19,15 @@ class Person(object):
 def start_sub_proc():
   subprocess.call(["./testNode.py", "socket"]) 
 
-def pickleobjects(data):
-  if hasattr(data, '__module__') and data.__module__ != "__builtin__":
-    return jsonpickle.encode(data)
-  return data
-
-def unpickle(data_dict):
-  if type(data_dict) != dict:
-    return data_dict
-  for key in data_dict:
-    d = data_dict[key]
-    if type(d) == unicode and "py/object" in d:
-      data_dict[key] = jsonpickle.decode(d)
-  return data_dict
-
 def runTask(name, data = []):
-  if type(data) == list:
-    data = map(pickleobjects, data)
   s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
   s.connect("socket")
-  s.send(json.dumps([name, data]))
-  data = json.dumps("done")
+  s.send(jsonify.encode([name, data]))
+  data = jsonify.encode("done")
   if name != "kill":
     data = s.recv(4096)
   s.close()
-  return unpickle(json.loads(data))
+  return jsonify.decode(data)
 
 class TestPythonLibrary(unittest.TestCase):
   @classmethod
@@ -144,6 +128,12 @@ class TestPythonLibrary(unittest.TestCase):
       "last_name" : "Benitez",
       "year_born" : 1991,
     })
+
+  def test_variable_nums(self):
+    result = runTask("sum", [1, 2, 3, 4, 5])
+    self.assertDictEqual(result, {"result" : 15})
+    result = runTask("sum", [3, 4, 5])
+    self.assertDictEqual(result, {"result" : 12})
 
 if __name__ == '__main__':
   unittest.main()
