@@ -15,7 +15,9 @@ type DeveloperCoord interface {
 type View struct { 
 	// The struct representing the current view of the system 
 	// used by the client to determine what it should be currently doing 
-	
+	ViewNum int 
+
+
 	// TODO: fill out the view
 	TaskParams map[TaskID]TaskParams
 	TaskAssignments map[TaskID][]ClientID

@@ -144,6 +144,8 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 			// new client event 
 			co.availableClients[op.CID] = true
 			co.dc.ClientJoined(co, op.CID)
+			// Increment our view
+			co.currentView.ViewNum++
 		} 
 		co.lastQueries[op.CID] = 0
 		// Update our view of how to contact the client 
@@ -164,6 +166,7 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 				// Dead client event 
 				co.ClientDead(clientID)
 				co.dc.ClientDead(co, clientID)
+				co.currentView.ViewNum++
 			} 
 			co.lastQueries[clientID]++
 		} 
@@ -258,6 +261,7 @@ func (co *Coordinator) AllocateTasks() {
 		} 
 		if i < len(co.unassignedTasks) { 
 			tid := co.unassignedTasks[i]
+			co.currentView.ViewNum++
 			co.currentView.TaskAssignments[tid] = append(co.currentView.TaskAssignments[tid], CID)
 			delete(co.availableClients, CID)
 		} 
@@ -317,6 +321,7 @@ func (co *Coordinator) StartTask(params TaskParams) TaskID {
 	co.nextTID++
 	co.currentView.TaskParams[tid] = params
 	co.currentView.TaskAssignments[tid] = make([]ClientID, 0)
+	co.currentView.ViewNum++
 	// Add this task to a list of unassigned tasks 
 	// It will be assigned to clients as appropriate
 	for i := 0; i < co.numTaskReplicas; i++ { 
@@ -330,6 +335,7 @@ func (co *Coordinator) KillTask(tid TaskID) {
 	// Can be used to allow clients to discard data that's no longer needed 
 	delete(co.currentView.TaskParams, tid)
 	delete(co.currentView.TaskAssignments, tid)
+	co.currentView.ViewNum++
 	// Add it to the map of killed tasks so we don't assign it again 
 	co.killedTasks[tid] = true
 }
@@ -422,4 +428,8 @@ func StartServer(servers []string, me int, dc DeveloperCoord, numTaskReplicas in
 	} ()
 
 	return co
+} 
+
+func main() { 
+	
 } 
