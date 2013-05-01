@@ -41,7 +41,9 @@ class TaskSprintNode:
         raise TypeError("Wrong argument type.")
       taskfunc = getattr(self, task)
       fargs, va, kw, defaults = inspect.getargspec(taskfunc)
-      if len(fargs) != len(args) + 1 and not va:
+      if len(fargs) > len(args) + 1:
+        error = {"error" : "invalid_param_count"}
+      elif len(fargs) != len(args) + 1 and not va:
         error = {"error" : "invalid_param_count"}
     except AttributeError:
       error = {"error" : "no_such_task"}
