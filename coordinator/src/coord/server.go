@@ -220,6 +220,9 @@ func (co *Coordinator) PerformPaxos(op Op) View {
 
 // Used to change leaders and to update the view of who's dead if we're the leader 
 func (co *Coordinator) tick() { 
+
+	co.UpdatePaxos()
+
 	// First, see if it's time to elect a new leader 
 	co.mu.Lock() 
 	shouldElectNewLeader := time.Since(co.lastLeaderElection) >= ELECTION_INTERVAL
