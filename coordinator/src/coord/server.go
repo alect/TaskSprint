@@ -361,7 +361,7 @@ func StartServer(servers []string, me int, dc DeveloperCoord, numTaskReplicas in
 	co := new(Coordinator)
 	co.me = me 
 	co.dc = dc 
-	co.currentView = View{map[TaskID]TaskParams{}, map[TaskID][]ClientID{}, map[ClientID]string{}}
+	co.currentView = View{0, map[TaskID]TaskParams{}, map[TaskID][]ClientID{}, map[ClientID]string{}}
 	co.initialized = false
 	co.leaderID = 0
 	co.leaderNum = 0	
