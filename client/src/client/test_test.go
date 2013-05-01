@@ -53,7 +53,11 @@ func TestSimple(t *testing.T) {
 
 	fmt.Printf("Test: Basic Query\n")
 
-  options := &Options{kvh, "/tmp/824-clientsocket"}
+  options := &Options{
+    kvh,
+    "/tmp/ts-clientsocket",
+    "./../../../libraries/client/python/testNode.py",
+  }
   Init(options)
 
 	fmt.Printf("  ... Passed\n")
