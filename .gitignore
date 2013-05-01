@@ -7,6 +7,9 @@
 *.a
 *.so
 
+# Test files
+*.test
+
 # Folders
 _obj
 _test
