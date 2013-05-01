@@ -17,6 +17,7 @@ import "math/big"
 import "crypto/rand"
 import "bytes"
 import "sync"
+import "encoding/json"
 
 type Options struct {
   servers []string
@@ -99,12 +100,13 @@ tasks []coordinator.TaskID) ([]coordinator.TaskID, []coordinator.TaskID) {
 }
 
 func (c *Client) killTasks(tasks []coordinator.TaskID) {
+  // Need to lock task array
   fmt.Printf("Killing %v\n", tasks)
-
 }
 
 func (c *Client) scheduleTasks(tasks []coordinator.TaskID, 
 args map[coordinator.TaskID]coordinator.TaskParams) {
+  // Need to lock task array
   fmt.Printf("Scheduling %v\n", tasks)
   t := 0
   for i := 0; i < len(c.tasks) && t < len(tasks); i, t = i + 1, t + 1 {
@@ -115,9 +117,36 @@ args map[coordinator.TaskID]coordinator.TaskParams) {
   }
 }
 
-func (c *Client) runTask(index int, params coordinator.TaskParams) {
+func (c *Client) markFinished(index int, result map[string]interface{}) {
+  // Need to lock task array
+  fmt.Printf("Result is %v\n", result)
+  c.clerk.Done(c.tasks[index], result)
+  c.tasks[index] = -1
+}
+
+func (c *Client) runTask(index int, args coordinator.TaskParams) {
   fmt.Printf("Running task %d on %s\n", c.tasks[index], c.nodes[index])
-  fmt.Printf("Params: %v\n", params)
+  fmt.Printf("args: %v\n", args)
+
+  // Connecting to node
+  conn, err := net.Dial("unix", string(c.nodes[index]))
+  if err != nil { log.Fatal("Node is dead.", err) }
+
+  // Sending data
+  data := fmt.Sprintf("[\"%s\", %s]", args.FuncName, args.BaseObject)
+  fmt.Fprintf(conn, data)
+
+  // Waiting for result
+  buffer := make([]byte, 1024)
+  size, readerr := conn.Read(buffer)
+  if readerr != nil { log.Fatal(readerr) }
+  conn.Close()
+
+  // Unserializing and marking as finished
+  result := make(map[string]interface{})
+  parseerr := json.Unmarshal(buffer[:size], &result)
+  if parseerr != nil { log.Fatal(parseerr) }
+  c.markFinished(index, result)
 }
 
 func (c *Client) processView(view *coordinator.View) {
@@ -163,7 +192,7 @@ func (c *Client) startServer(socket string) {
 }
 
 func (c *Client) initNodes() int {
-  cpus := runtime.NumCPU() * 2;
+  cpus := runtime.NumCPU() / 4;
   c.nodes = make([]NodeSocket, cpus)
   c.tasks = make([]coordinator.TaskID, cpus)
   for i := 0; i < cpus; i++ {
@@ -178,7 +207,8 @@ func (c *Client) initNodes() int {
     if err := cmd.Start(); err != nil { log.Fatal(err) }
     go io.Copy(os.Stdout, stdout)
 
-    fmt.Printf("Started node at %s\n", socket)
+    time.Sleep(250 * time.Millisecond)
+    fmt.Printf("Node at %s started.\n", socket)
   }
   return cpus
 }

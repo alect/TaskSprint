@@ -36,10 +36,9 @@ func (sc *TestCoord) TaskDone(co *Coordinator,
   TID TaskID, DoneValues map[string]interface{}) {
 	// Handle tasks with prerequisites here 
 	if TID == sc.currentTask {
-    byteArray := []byte(DoneValues["result"].(string))
-    var result int
-    json.Unmarshal(byteArray, result)
-    fmt.Println("Result is %d\n", result)
+    result := int(DoneValues["result"].(float64))
+    fmt.Printf("Result is %d\n", result)
+    /* fmt.Println("Results are %v\n", DoneValues) */
     co.Finish([]TaskID{TID})
 	}
 }
