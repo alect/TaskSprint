@@ -8,12 +8,20 @@ import "os"
 import "log"
 import "net/rpc"
 import "runtime"
+import "flag"
+import "strings"
+
+type Options struct {
+  servers []string
+  socket string
+}
 
 type Client struct { 
   id coordinator.ClientID
   l net.Listener
   clerk *coordinator.Clerk
   currentView coordinator.View
+  options Options
 }
 
 type GetDataArgs struct { 
@@ -64,9 +72,25 @@ func (c *Client) numNodes() int {
   return runtime.NumCPU();
 }
 
-func Init(servers[]string, socket string) *Client {
+func InitFlags() *Options {
+  options := new(Options)
+  servers := flag.String("servers", "", "comma-seperated list of servers")
+  socket := flag.String("socket", "", "name of the client-dev socket")
+
+  flag.Parse()
+
+  if *servers == "" || *socket == "" {
+    log.Fatal("usage: -servers ip:port[,ip:port...] -socket path")
+  } 
+
+  options.servers = strings.Split(*servers, ",")
+  options.socket = *socket
+  return options
+}
+
+func Init(opts *Options) *Client {
   c := new(Client)
-  c.clerk = coordinator.MakeClerk(servers, socket, c.numNodes())
+  c.clerk = coordinator.MakeClerk(opts.servers, opts.socket, c.numNodes())
 
   go func() {
     for {
@@ -75,11 +99,11 @@ func Init(servers[]string, socket string) *Client {
     }
   }()
 
-  c.startServer(socket)
+  c.startServer(opts.socket)
   return c
 }
 
 func main() {
-  servers := make([]string, 0)
-  Init(servers, "/tmp/socket")
+  opts := InitFlags()
+  Init(opts)
 }
