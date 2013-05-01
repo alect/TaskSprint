@@ -22,6 +22,9 @@ class TestNode(TaskSprintNode):
   def person(self, name, age):
     return {"person": Person(name, age)}
 
+  def sum(self, *nums):
+    return {"result": sum(nums)}
+
   def detail_person(self, person):
     result = {}
     result["name"] = person.name
