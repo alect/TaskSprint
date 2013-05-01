@@ -2,7 +2,6 @@ package coordinator
 
 import "net/rpc"
 import "time"
-import "math/rand"
 
 type Clerk struct { 
 	servers []string // Coordinator replicas 
@@ -11,11 +10,11 @@ type Clerk struct {
 	numNodes int
 }
 
-func MakeClerk(servers[]string, me string, numNodes int) *Clerk { 
+func MakeClerk(servers[]string, me string, numNodes int, id ClientID) *Clerk { 
 	ck := new(Clerk)
 	ck.servers = servers 
 	ck.me = me 
-	ck.clerkID = ClientID(rand.Int63())
+	ck.clerkID = id
 	ck.numNodes = numNodes
 	return ck
 } 

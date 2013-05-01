@@ -24,6 +24,8 @@ type Options struct {
   program string
 }
 
+
+type NodeSocket string
 type Client struct { 
   viewMu sync.Mutex
   id coordinator.ClientID
@@ -31,7 +33,8 @@ type Client struct {
   clerk *coordinator.Clerk
   currentView coordinator.View
   options *Options
-  nodes []string
+  nodes []NodeSocket
+  tasks []coordinator.TaskID
 }
 
 type GetDataArgs struct { 
@@ -64,11 +67,69 @@ func PrintView(view *coordinator.View) {
   fmt.Println(buffer.String())
 }
 
+// Wow, ridiculously ugly.
+func (c *Client) ExtractTasks(view *coordinator.View) []coordinator.TaskID {
+  tasks := make([]coordinator.TaskID, 0)
+  for tid, v := range view.TaskAssignments {
+    for _, cid := range v {
+      if c.id == cid { tasks = append(tasks, tid) }
+    }
+  }
+  return tasks
+}
+
+func (c *Client) SplitTasks(
+tasks []coordinator.TaskID) ([]coordinator.TaskID, []coordinator.TaskID) {
+  currentTasks := make(map[coordinator.TaskID]int)
+  for _, tid := range c.tasks { currentTasks[tid] = 1 }
+
+  newTasks := make([]coordinator.TaskID, 0)
+  for _, tid := range tasks {
+    _, present := currentTasks[tid]
+    if !present { newTasks = append(newTasks, tid) }
+    currentTasks[tid] = 0
+  }
+
+  killedTasks := make([]coordinator.TaskID, 0)
+  for k, v := range currentTasks {
+    if v == 1 && k != -1 { killedTasks = append(killedTasks, k) }
+  }
+
+  return newTasks, killedTasks
+}
+
+func (c *Client) killTasks(tasks []coordinator.TaskID) {
+  fmt.Printf("Killing %v\n", tasks)
+
+}
+
+func (c *Client) scheduleTasks(tasks []coordinator.TaskID, 
+args map[coordinator.TaskID]coordinator.TaskParams) {
+  fmt.Printf("Scheduling %v\n", tasks)
+  t := 0
+  for i := 0; i < len(c.tasks) && t < len(tasks); i, t = i + 1, t + 1 {
+    if c.tasks[i] == -1 {
+      c.tasks[i] = tasks[t]
+      go c.runTask(i, args[tasks[t]])
+    }
+  }
+}
+
+func (c *Client) runTask(index int, params coordinator.TaskParams) {
+  fmt.Printf("Running task %d on %s\n", c.tasks[index], c.nodes[index])
+  fmt.Printf("Params: %v\n", params)
+}
+
 func (c *Client) processView(view *coordinator.View) {
+  PrintView(view)
   c.viewMu.Lock()
   defer c.viewMu.Unlock()
 
-  PrintView(view)
+  myTasks := c.ExtractTasks(view)
+  newTasks, killedTasks := c.SplitTasks(myTasks)
+  c.killTasks(killedTasks)
+  c.scheduleTasks(newTasks, view.TaskParams)
+
   c.currentView = *view;
 }
 
@@ -103,17 +164,19 @@ func (c *Client) startServer(socket string) {
 
 func (c *Client) initNodes() int {
   cpus := runtime.NumCPU() * 2;
-  c.nodes = make([]string, cpus)
+  c.nodes = make([]NodeSocket, cpus)
+  c.tasks = make([]coordinator.TaskID, cpus)
   for i := 0; i < cpus; i++ {
     socket := "/tmp/ts-client-node-" + strconv.Itoa(i)
-    c.nodes[i] = socket
+    c.nodes[i] = NodeSocket(socket)
+    c.tasks[i] = -1
 
+    // Starting the subproc and copying its stdout to mine
     cmd := exec.Command(c.options.program, socket)
     stdout, outerr := cmd.StdoutPipe()
-
     if outerr != nil { log.Fatal(outerr) }
     if err := cmd.Start(); err != nil { log.Fatal(err) }
-    go io.Copy(os.Stdout, stdout) // Print subproc to stdout
+    go io.Copy(os.Stdout, stdout)
 
     fmt.Printf("Started node at %s\n", socket)
   }
@@ -138,11 +201,11 @@ func InitFlags() *Options {
   return options
 }
 
-func Init(opts *Options) *Client {
+func Init(o *Options) *Client {
   c := new(Client)
-  c.options = opts
+  c.options = o
   c.id = coordinator.ClientID(nrand())
-  c.clerk = coordinator.MakeClerk(opts.servers, opts.socket, c.initNodes())
+  c.clerk = coordinator.MakeClerk(o.servers, o.socket, c.initNodes(), c.id)
   c.currentView.ViewNum = -1
 
   go func() {
@@ -152,7 +215,7 @@ func Init(opts *Options) *Client {
     }
   }()
 
-  c.startServer(opts.socket)
+  c.startServer(o.socket)
   return c
 }
 
