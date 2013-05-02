@@ -20,7 +20,7 @@ func (sc *TestCoord) Init(co *Coordinator, seed int64) {
 	// Start a task
   for i := 0; i < sc.numSubTasks; i++ {
     s := i * 4
-    args := []int{s, s + 1, s + 2, s + 4}
+    args := []int{s, s + 1, s + 2, s + 3}
     sc.goPy(co, "sum", args, 1)
   }
 }
