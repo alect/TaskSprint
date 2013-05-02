@@ -15,7 +15,7 @@ type DeveloperCoord interface {
 type View struct { 
 	// The struct representing the current view of the system 
 	// used by the client to determine what it should be currently doing 
-	ViewNum int 
+	ViewNum int
 
 
 	// TODO: fill out the view
@@ -27,6 +27,7 @@ type View struct {
 // To avoid concurrency issues when we're returning from a query, we clone the view.
 func cloneView(oldView View) View { 
 	newView := View{}
+	newView.ViewNum = oldView.ViewNum
 	newView.TaskParams = map[TaskID]TaskParams{}
 	for k, v := range oldView.TaskParams { 
 		newView.TaskParams[k] = v
