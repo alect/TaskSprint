@@ -36,7 +36,7 @@ const (
   Pending = 0
   Started = 1
   Finished = 2
-  Killed = 2
+  Killed = 3
 )
 
 type NodeID int
@@ -54,7 +54,7 @@ type Task struct {
   data map[string]interface{}
 }
 
-type Client struct { 
+type Client struct {
   viewMu sync.Mutex
   id coordinator.ClientID
   l net.Listener
@@ -65,13 +65,13 @@ type Client struct {
   tasks map[coordinator.TaskID]*Task
 }
 
-type GetDataArgs struct { 
-	Key string 
-} 
+type GetDataArgs struct {
+	Key string
+}
 
-type GetDataReply struct { 
+type GetDataReply struct {
 	Data interface{}
-} 
+}
 
 func (c *Client) GetData(args *GetDataArgs, reply *GetDataReply) error {
   return nil
@@ -91,6 +91,7 @@ func PrintView(view *coordinator.View) {
       s := fmt.Sprintf("%d\t", c)
       buffer.WriteString(s)
     }
+    buffer.WriteString("\n")
   }
   fmt.Println(buffer.String())
 }
@@ -192,13 +193,19 @@ func (c *Client) runTask(task *Task) {
 func (c *Client) markFinished(task *Task, result map[string]interface{}) {
   // Need task lock
   fmt.Printf("Result is %v\n", result)
-  c.clerk.Done(task.id, result)
+  outResult := make(map[string]interface{})
+  for _, k := range task.params.DoneKeys {
+    if v, p := result[k]; p { outResult[k] = v }
+  }
+
+  c.clerk.Done(task.id, outResult)
   node := task.node
   node.task = nil
   node.status = Free
 
   task.data = result
   task.status = Finished
+  task.node = nil
 }
 
 func (c *Client) tick() {
@@ -231,7 +238,7 @@ func (c *Client) startServer(socket string) {
 }
 
 func (c *Client) initNodes() int {
-  cpus := runtime.NumCPU() / 4;
+  cpus := runtime.NumCPU();
   c.nodes = make([]*Node, cpus)
   for i := 0; i < cpus; i++ {
     socket := "/tmp/ts-client-node-" + strconv.Itoa(i)
@@ -298,3 +305,4 @@ func main() {
   opts := InitFlags()
   Init(opts)
 }
+
