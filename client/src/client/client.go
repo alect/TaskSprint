@@ -25,8 +25,35 @@ type Options struct {
   program string
 }
 
+type NodeStatus int
+const (
+  Free = 0
+  Busy = 1
+)
 
-type NodeSocket string
+type TaskStatus int
+const (
+  Pending = 0
+  Started = 1
+  Finished = 2
+  Killed = 2
+)
+
+type NodeID int
+type Node struct {
+  socket string
+  status NodeStatus
+  task *Task
+}
+
+type Task struct {
+  id coordinator.TaskID
+  node *Node
+  status TaskStatus
+  params coordinator.TaskParams
+  data map[string]interface{}
+}
+
 type Client struct { 
   viewMu sync.Mutex
   id coordinator.ClientID
@@ -34,8 +61,8 @@ type Client struct {
   clerk *coordinator.Clerk
   currentView coordinator.View
   options *Options
-  nodes []NodeSocket
-  tasks []coordinator.TaskID
+  nodes []*Node
+  tasks map[coordinator.TaskID]*Task
 }
 
 type GetDataArgs struct { 
@@ -68,7 +95,19 @@ func PrintView(view *coordinator.View) {
   fmt.Println(buffer.String())
 }
 
-// Wow, ridiculously ugly.
+func (c *Client) processView(view *coordinator.View) {
+  PrintView(view)
+  c.viewMu.Lock()
+  defer c.viewMu.Unlock()
+
+  myTasks := c.ExtractTasks(view)
+  newTasks, killedTasks := c.SplitTasks(myTasks)
+  c.killTasks(killedTasks)
+  c.scheduleTasks(newTasks, view.TaskParams)
+
+  c.currentView = *view;
+}
+
 func (c *Client) ExtractTasks(view *coordinator.View) []coordinator.TaskID {
   tasks := make([]coordinator.TaskID, 0)
   for tid, v := range view.TaskAssignments {
@@ -81,8 +120,9 @@ func (c *Client) ExtractTasks(view *coordinator.View) []coordinator.TaskID {
 
 func (c *Client) SplitTasks(
 tasks []coordinator.TaskID) ([]coordinator.TaskID, []coordinator.TaskID) {
+  // Do I need a task lock? Not sure.
   currentTasks := make(map[coordinator.TaskID]int)
-  for _, tid := range c.tasks { currentTasks[tid] = 1 }
+  for tid, _ := range c.tasks { currentTasks[tid] = 1 }
 
   newTasks := make([]coordinator.TaskID, 0)
   for _, tid := range tasks {
@@ -93,7 +133,7 @@ tasks []coordinator.TaskID) ([]coordinator.TaskID, []coordinator.TaskID) {
 
   killedTasks := make([]coordinator.TaskID, 0)
   for k, v := range currentTasks {
-    if v == 1 && k != -1 { killedTasks = append(killedTasks, k) }
+    if v == 1 { killedTasks = append(killedTasks, k) }
   }
 
   return newTasks, killedTasks
@@ -102,38 +142,38 @@ tasks []coordinator.TaskID) ([]coordinator.TaskID, []coordinator.TaskID) {
 func (c *Client) killTasks(tasks []coordinator.TaskID) {
   // Need to lock task array
   fmt.Printf("Killing %v\n", tasks)
+  for _, tid := range tasks {
+    c.tasks[tid].status = Killed
+  }
 }
 
-func (c *Client) scheduleTasks(tasks []coordinator.TaskID, 
+func (c *Client) scheduleTasks(tasks []coordinator.TaskID,
 args map[coordinator.TaskID]coordinator.TaskParams) {
   // Need to lock task array
   fmt.Printf("Scheduling %v\n", tasks)
   t := 0
-  for i := 0; i < len(c.tasks) && t < len(tasks); i, t = i + 1, t + 1 {
-    if c.tasks[i] == -1 {
-      c.tasks[i] = tasks[t]
-      go c.runTask(i, args[tasks[t]])
+  for i := 0; i < len(c.nodes) && t < len(tasks); i, t = i + 1, t + 1 {
+    if c.nodes[i].status == Free {
+      newTask := &Task{tasks[t], c.nodes[i], Pending, args[tasks[t]], nil}
+      c.tasks[tasks[t]] = newTask
+      go c.runTask(newTask)
     }
   }
 }
 
-func (c *Client) markFinished(index int, result map[string]interface{}) {
-  // Need to lock task array
-  fmt.Printf("Result is %v\n", result)
-  c.clerk.Done(c.tasks[index], result)
-  c.tasks[index] = -1
-}
+func (c *Client) runTask(task *Task) {
+  // Need task lock
+  node, params := task.node, task.params
+  fmt.Printf("Running task %d on %s\n", task.id, node.socket)
+  fmt.Printf("params: %v\n", params)
 
-func (c *Client) runTask(index int, args coordinator.TaskParams) {
-  fmt.Printf("Running task %d on %s\n", c.tasks[index], c.nodes[index])
-  fmt.Printf("args: %v\n", args)
-
-  // Connecting to node
-  conn, err := net.Dial("unix", string(c.nodes[index]))
+  // Connecting to node and marking task as started
+  node.status, task.status = Busy, Started
+  conn, err := net.Dial("unix", node.socket)
   if err != nil { log.Fatal("Node is dead.", err) }
 
-  // Sending data
-  data := fmt.Sprintf("[\"%s\", %s]", args.FuncName, args.BaseObject)
+  // Sending data 
+  data := fmt.Sprintf("[\"%s\", %s]", params.FuncName, params.BaseObject)
   fmt.Fprintf(conn, data)
 
   // Waiting for result
@@ -146,20 +186,19 @@ func (c *Client) runTask(index int, args coordinator.TaskParams) {
   result := make(map[string]interface{})
   parseerr := json.Unmarshal(buffer[:size], &result)
   if parseerr != nil { log.Fatal(parseerr) }
-  c.markFinished(index, result)
+  c.markFinished(task, result)
 }
 
-func (c *Client) processView(view *coordinator.View) {
-  PrintView(view)
-  c.viewMu.Lock()
-  defer c.viewMu.Unlock()
+func (c *Client) markFinished(task *Task, result map[string]interface{}) {
+  // Need task lock
+  fmt.Printf("Result is %v\n", result)
+  c.clerk.Done(task.id, result)
+  node := task.node
+  node.task = nil
+  node.status = Free
 
-  myTasks := c.ExtractTasks(view)
-  newTasks, killedTasks := c.SplitTasks(myTasks)
-  c.killTasks(killedTasks)
-  c.scheduleTasks(newTasks, view.TaskParams)
-
-  c.currentView = *view;
+  task.data = result
+  task.status = Finished
 }
 
 func (c *Client) tick() {
@@ -193,12 +232,10 @@ func (c *Client) startServer(socket string) {
 
 func (c *Client) initNodes() int {
   cpus := runtime.NumCPU() / 4;
-  c.nodes = make([]NodeSocket, cpus)
-  c.tasks = make([]coordinator.TaskID, cpus)
+  c.nodes = make([]*Node, cpus)
   for i := 0; i < cpus; i++ {
     socket := "/tmp/ts-client-node-" + strconv.Itoa(i)
-    c.nodes[i] = NodeSocket(socket)
-    c.tasks[i] = -1
+    c.nodes[i] = &Node{socket, Free, nil}
 
     // Starting the subproc and copying its stdout to mine
     cmd := exec.Command(c.options.program, socket)
@@ -236,6 +273,7 @@ func Init(o *Options) *Client {
   c.options = o
   c.id = coordinator.ClientID(nrand())
   c.clerk = coordinator.MakeClerk(o.servers, o.socket, c.initNodes(), c.id)
+  c.tasks = make(map[coordinator.TaskID]*Task)
   c.currentView.ViewNum = -1
 
   go func() {
