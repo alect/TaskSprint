@@ -11,6 +11,7 @@ import "syscall"
 import "encoding/gob"
 import "math/rand"
 import "time"
+import "container/list"
 
 type Coordinator struct { 
 	mu sync.Mutex
@@ -41,8 +42,11 @@ type Coordinator struct {
 
 	// Used for task allocation 
 	numTaskReplicas int // The number of replicas we make of each task. 
-	unassignedTasks []TaskID
-	availableClients map[ClientID]bool
+	unassignedTasks *list.List
+	// The current assignment of active tasks 
+	activeTasks map[ClientID]map[TaskID]bool
+	// the number of nodes each client has available right now
+	availableClients map[ClientID]int
 	killedTasks map[TaskID]bool // Dead tasks that we shouldn't assign
 
 	// Output info for when the task is done 
@@ -142,22 +146,27 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 		_, exists := co.lastQueries[op.CID] 
 		if !exists { 
 			// new client event 
-			co.availableClients[op.CID] = true
+			co.activeTasks[op.CID] = map[TaskID]bool{}
+			co.availableClients[op.CID] = op.NumNodes
+			// Update our view of how to contact the client 
+			co.currentView.ClientInfo[op.CID] = op.Contact
 			co.dc.ClientJoined(co, op.CID)
 			// Increment our view
 			co.currentView.ViewNum++
 		} 
 		co.lastQueries[op.CID] = 0
-		// Update our view of how to contact the client 
-		co.currentView.ClientInfo[op.CID] = op.Contact
 		co.AllocateTasks()
 		// Clone the current view for queries so concurrency doesn't affect it 
 		return cloneView(co.currentView)
 	} else if op.Op == DONE { 
 		// Handle finished tasks 
 		co.dc.TaskDone(co, op.TID, op.DoneValues)
-		// This client is now available 
-		co.availableClients[op.CID] = true
+		// Check to see if this is an active task for this client 
+		_, active := co.activeTasks[op.CID][op.TID] 
+		if active { 
+			delete(co.activeTasks[op.CID], op.TID)
+			co.availableClients[op.CID]++
+		}
 		co.AllocateTasks()
 	} else if op.Op == TICK { 
 		// Handle ticks to see if Some clients should be considered dead
@@ -248,36 +257,52 @@ func (co *Coordinator) tick() {
 } 
 
 // Called automatically to allocate tasks to clients as clients become available
-func (co *Coordinator) AllocateTasks() { 
-	// Go through each of our available clients and attempt to allocate a task 
-	for CID := range co.availableClients { 
-		if len(co.unassignedTasks) == 0 { 
-			return
-		} 
-		// Look for an unassignedTask that we can pull out of the slice 
-		var i int 
-		for i = 0; i < len(co.unassignedTasks); i++ { 
-			_, killed := co.killedTasks[co.unassignedTasks[i]] 
-			if !killed { 
+func (co *Coordinator) AllocateTasks() {
+	// Go through each of our available clients and attempt to allocate a task
+	for cid, N := range co.availableClients {
+		for i := 0; i < N; i++ {
+			found := false
+			var tid TaskID
+			for e := co.unassignedTasks.Front(); e != nil; e = e.Next() {
+				tid = e.Value.(TaskID)
+				// Check to see if it's been killed
+				_, killed := co.killedTasks[tid]
+				if killed {
+					co.unassignedTasks.Remove(e)
+					continue
+				}
+				// Check to see if it's already assigned 
+				alreadyAssigned := false
+				for _, assCid := range co.currentView.TaskAssignments[tid] {
+					if assCid == cid {
+						alreadyAssigned = true
+					}
+				}
+				if !alreadyAssigned {
+					found = true
+					co.unassignedTasks.Remove(e)
+					break
+				}
+			}
+			
+			if found {
+				co.currentView.ViewNum++
+				co.currentView.TaskAssignments[tid] = append(co.currentView.TaskAssignments[tid], cid)
+				co.activeTasks[cid][tid] = true
+				co.availableClients[cid]--
+			} else {
 				break
-			} 
-		} 
-		if i < len(co.unassignedTasks) { 
-			tid := co.unassignedTasks[i]
-			co.currentView.ViewNum++
-			co.currentView.TaskAssignments[tid] = append(co.currentView.TaskAssignments[tid], CID)
-			delete(co.availableClients, CID)
-		} 
-		// Shorten the slice
-		co.unassignedTasks = co.unassignedTasks[i+1:]
-	} 
-} 
+			}
+		}
+	}
+}
 
 // When a client dies, have to remove it from the view and possibly 
 // re-assign its tasks 
 func (co *Coordinator) ClientDead(CID ClientID) { 
 	// First, this client is not available 
 	delete(co.availableClients, CID) 
+	delete(co.activeTasks, CID)
 	// Now, find tasks this client is responsible for and remove the client 
 	for tid, clients := range co.currentView.TaskAssignments { 
 		foundClient := false 
@@ -292,7 +317,7 @@ func (co *Coordinator) ClientDead(CID ClientID) {
 		if foundClient { 
 			co.currentView.TaskAssignments[tid] = newAsst
 			// reassign this task?
-			co.unassignedTasks = append(co.unassignedTasks, tid)
+			co.unassignedTasks.PushFront(tid)
 		} 
 	} 
 
@@ -303,7 +328,7 @@ func (co *Coordinator) ClientDead(CID ClientID) {
 
 // When a client wants the latest view
 func (co *Coordinator) Query(args *QueryArgs, reply *QueryReply) error { 
-	op := Op { Op: QUERY, CID: args.CID, Contact: args.Contact }
+	op := Op { Op: QUERY, CID: args.CID, Contact: args.Contact, NumNodes: args.NumNodes }
 	result := co.PerformPaxos(op)
 	reply.View = result
 	return nil 
@@ -328,15 +353,23 @@ func (co *Coordinator) StartTask(params TaskParams) TaskID {
 	// Add this task to a list of unassigned tasks 
 	// It will be assigned to clients as appropriate
 	for i := 0; i < co.numTaskReplicas; i++ { 
-		co.unassignedTasks = append(co.unassignedTasks, tid)
+		co.unassignedTasks.PushBack(tid)
 	} 
 	return tid
 } 
 
 func (co *Coordinator) KillTask(tid TaskID) { 
-	// Kills a task by removing its assignment from the view 
-	// Can be used to allow clients to discard data that's no longer needed 
+	// Kills a task by removing its assignment from the view
+	// Can be used to allow clients to discard data that's no longer needed
 	delete(co.currentView.TaskParams, tid)
+	// Release clients for whom the task is currently active
+	for _, cid := range co.currentView.TaskAssignments[tid] {
+		_, active := co.activeTasks[cid][tid]
+		if active {
+			co.availableClients[cid]++
+			delete(co.activeTasks[cid], tid)
+		}
+	}
 	delete(co.currentView.TaskAssignments, tid)
 	co.currentView.ViewNum++
 	// Add it to the map of killed tasks so we don't assign it again 
@@ -345,14 +378,14 @@ func (co *Coordinator) KillTask(tid TaskID) {
 
 func (co *Coordinator) Finish(outputTasks []TaskID) { 
 	// When we're completely done 
-	co.isFinished = true 
+	co.isFinished = true
 	co.outputTasks = outputTasks
 }  
 
 
 // For testing purposes 
 func (co *Coordinator) Kill() { 
-	co.dead = true 
+	co.dead = true
 	co.l.Close()
 	co.px.Kill()
 } 
@@ -374,8 +407,9 @@ func StartServer(servers []string, me int, dc DeveloperCoord, numTaskReplicas in
 
 	co.seed = seed
 	co.numTaskReplicas = numTaskReplicas
-	co.unassignedTasks = make([]TaskID, 0)
-	co.availableClients = map[ClientID]bool{}
+	co.unassignedTasks = list.New()
+	co.activeTasks = map[ClientID]map[TaskID]bool{}
+	co.availableClients = map[ClientID]int{}
 	co.killedTasks = map[TaskID]bool{}
 
 	co.isFinished = false

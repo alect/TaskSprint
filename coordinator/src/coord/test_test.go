@@ -48,7 +48,7 @@ func TestSimple(t *testing.T) {
 		coa[i] = StartServer(kvh, i, sca[i], numTaskReplicas, seed)
 	} 
 	
-	ck := MakeClerk(kvh, "test-clerk", 4)
+	ck := MakeClerk(kvh, "test-clerk", 4, 22)
 	/*var cka [nservers]*Clerk 
 	for i := 0; i < nservers; i++ { 
 		cka[i] = MakeClerk([]string{kvh[i]}, "test-clerk", 4)
@@ -91,6 +91,6 @@ func TestSimple(t *testing.T) {
 	fmt.Printf("  ... Passed\n")
 
 	// Try to finish the tasks for this coordinator 
-
+	
 	
 } 
