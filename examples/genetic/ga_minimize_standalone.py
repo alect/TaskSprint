@@ -9,14 +9,14 @@ import sys
 def fixed2float(point, fprops):
     x = point[0]
     y = point[1]
-    x = (fprops['varmax']-fprops['varmin'])*(float(x) / (2**fprops['res'])) + fprops['varmin']
-    y = (fprops['varmax']-fprops['varmin'])*(float(y) / (2**fprops['res'])) + fprops['varmin']
+    x = (fprops['argmax']-fprops['argmin'])*(float(x) / (2**fprops['resolution'])) + fprops['argmin']
+    y = (fprops['argmax']-fprops['argmin'])*(float(y) / (2**fprops['resolution'])) + fprops['argmin']
     return (x,y)
 
-# Evaluate the fitness of a point on function fprops['func']
+# Evaluate the fitness of a point on function fprops['function']
 def fitness(point, fprops):
     (x,y) = fixed2float(point, fprops)
-    return fprops['func'](x,y)
+    return abs(fprops['function'](x,y))
 
 ################################################################################
 ################################################################################
@@ -33,8 +33,8 @@ def ga_generate(n, fprops):
     f = []
 
     for i in range(n):
-        x = random.randint(0, 2**fprops['res'])
-        y = random.randint(0, 2**fprops['res'])
+        x = random.randint(0, 2**fprops['resolution'])
+        y = random.randint(0, 2**fprops['resolution'])
         point = (x,y)
 
         p.append(point)
@@ -67,11 +67,10 @@ def ga_evolve(pf, n, pr_crossover, pr_mutation, fprops):
         return [p1, p2]
 
     def mutate(p):
-        for i in range(fprops['res']):
+        for i in range(fprops['resolution']):
             # If mutation occurs, flip a bit
             if (random.random() < pr_mutation):
                 p = (p[0] ^ 2**i, p[1])
-            # If mutation occurs, flip a bit
             if (random.random() < pr_mutation):
                 p = (p[0], p[1] ^ 2**i)
 
@@ -106,10 +105,11 @@ def ga_evolve(pf, n, pr_crossover, pr_mutation, fprops):
 ################################################################################
 
 fprops = {}
-fprops['varmin'] = -5.0
-fprops['varmax'] = 5.0
-fprops['res'] = 20
-fprops['func'] = lambda x,y: x**2 + y**2
+fprops['argmin'] = -5.0
+fprops['argmax'] = 5.0
+fprops['resolution'] = 20
+fprops['epsilon'] = 0.00005
+fprops['function'] = lambda x,y: x**2 + y**2
 
 population_size = 100
 population_new = 0.50
@@ -127,7 +127,10 @@ for i in range(1000):
     pf = sorted(pf, key=lambda x: x[1])
     print i, [x[1] for x in pf[0:5]]
     sys.stdout.flush()
-    if pf[0][1] < 0.00005: break
+
+    # Break if the best fitness makes the epsilon
+    if pf[0][1] < fprops['epsilon']:
+        break
 
     # Evolve
     pf = ga_evolve(pf, int(population_new*len(pf)), pr_crossover, pr_mutation, fprops)
