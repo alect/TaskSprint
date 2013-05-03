@@ -176,6 +176,12 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 				co.ClientDead(clientID)
 				co.dc.ClientDead(co, clientID)
 				co.currentView.ViewNum++
+
+				// If we don't have any more clients and we're done, shut down this replica 
+				if co.isFinished && len(co.availableClients) == 0 { 
+					co.Kill()
+				} 
+
 			} 
 			co.lastQueries[clientID]++
 		} 
@@ -303,6 +309,9 @@ func (co *Coordinator) ClientDead(CID ClientID) {
 	// First, this client is not available 
 	delete(co.availableClients, CID) 
 	delete(co.activeTasks, CID)
+	delete(co.lastQueries, CID)
+	delete(co.currentView.ClientInfo, CID)
+
 	// Now, find tasks this client is responsible for and remove the client 
 	for tid, clients := range co.currentView.TaskAssignments { 
 		foundClient := false 
@@ -380,6 +389,10 @@ func (co *Coordinator) Finish(outputTasks []TaskID) {
 	// When we're completely done 
 	co.isFinished = true
 	co.outputTasks = outputTasks
+
+	co.currentView.ViewNum++
+	co.currentView.isFinished = true
+	co.currentView.outputTasks = outputTasks
 }  
 
 
@@ -397,7 +410,7 @@ func StartServer(servers []string, me int, dc DeveloperCoord, numTaskReplicas in
 	co := new(Coordinator)
 	co.me = me 
 	co.dc = dc 
-	co.currentView = View{0, map[TaskID]TaskParams{}, map[TaskID][]ClientID{}, map[ClientID]string{}}
+	co.currentView = View{0, false, nil, map[TaskID]TaskParams{}, map[TaskID][]ClientID{}, map[ClientID]string{}}
 	co.initialized = false
 	co.leaderID = 0
 	co.leaderNum = 0	

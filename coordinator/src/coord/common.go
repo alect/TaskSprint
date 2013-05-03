@@ -17,6 +17,9 @@ type View struct {
 	// used by the client to determine what it should be currently doing 
 	ViewNum int
 
+	// Conclusion information 
+	isFinished bool 
+	outputTasks []TaskID
 
 	// TODO: fill out the view
 	TaskParams map[TaskID]TaskParams

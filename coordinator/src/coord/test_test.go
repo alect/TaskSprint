@@ -17,7 +17,7 @@ func port(tag string, host int) string {
 	return s
 } 
 
-func cleanup(coa []*Coordinator) { 
+func cleanup(coa []*Coordinator) {
 	for i := 0; i < len(coa); i++ { 
 		if coa[i] != nil { 
 			coa[i].Kill()
@@ -91,6 +91,31 @@ func TestSimple(t *testing.T) {
 	fmt.Printf("  ... Passed\n")
 
 	// Try to finish the tasks for this coordinator 
+} 
+
+
+func TestMulti(t *testing.T) { 
+	runtime.GOMAXPROCS(4)
+
+	const numTaskReplicas = 1
+
+	const nservers = 3 
+	var coa []*Coordinator = make([]*Coordinator, nservers)
+	var kvh []string = make([]string, nservers)
+	var sca []*SimpleMultiCoord = make([]*SimpleMultiCoord, nservers)
+	defer cleanup(coa)
 	
+	seed := int64(0)
+
+	for i := 0; i < nservers; i++ { 
+		sca[i] = MakeSimpleMultiCoord()
+	}
+	for i := 0; i < nservers; i++ { 
+		kvh[i] = port("basic", i)
+	} 
+	for i := 0; i < nservers; i++ { 
+		coa[i] = StartServer(kvh, i, sca[i], numTaskReplicas, seed)
+	} 
 	
+	//ck := MakeClerk(kvh, "test-clerk", 4, 22)
 } 
