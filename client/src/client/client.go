@@ -152,7 +152,9 @@ func (c *Client) scheduleTasks(tasks []coordinator.TaskID,
 args map[coordinator.TaskID]coordinator.TaskParams) {
   // Need to lock task array
   /* fmt.Printf("Scheduling %v\n", tasks) */
-  t := 0
+
+	/*
+	t := 0
   for i := 0; i < len(c.nodes) && t < len(tasks); i, t = i + 1, t + 1 {
     if c.nodes[i].status == Free {
       newTask := &Task{tasks[t], c.nodes[i], Pending, args[tasks[t]], nil}
@@ -160,12 +162,26 @@ args map[coordinator.TaskID]coordinator.TaskParams) {
       go c.runTask(newTask)
     }
   }
+	*/
+	// Try to schedule each task on a free node
+	for t := 0; t < len(tasks); t++ { 
+		for i := 0; i < len(c.nodes); i++ { 
+			if c.nodes[i].status == Free { 
+				newTask := &Task{tasks[t], c.nodes[i], Pending, args[tasks[t]], nil}
+				// Have to make the node busy here
+				c.nodes[i].status = Busy
+				c.tasks[tasks[t]] = newTask
+				go c.runTask(newTask)
+				break
+			} 
+		}
+	} 
 }
 
 func (c *Client) runTask(task *Task) {
   // Need task lock
   node, params := task.node, task.params
-  /* fmt.Printf("Running task %d on %s\n", task.id, node.socket) */
+  //fmt.Printf("Running task %d on %s\n", task.id, node.socket)
   /* fmt.Printf("params: %v\n", params) */
 
   // Connecting to node and marking task as started
@@ -244,7 +260,6 @@ func (c *Client) initNodes() int {
     socket := "/tmp/ts-client-node-"
     socket += strconv.FormatInt(int64(c.id), 10) + "-" + strconv.Itoa(i)
     c.nodes[i] = &Node{socket, Free, nil}
-
     // Starting the subproc and copying its stdout to mine
     cmd := exec.Command(c.options.program, socket)
     stdout, outerr := cmd.StdoutPipe()
@@ -278,11 +293,15 @@ func InitFlags() *Options {
 
 func Init(o *Options) *Client {
   c := new(Client)
+	//c.viewMu.Lock()
+
   c.options = o
   c.id = coordinator.ClientID(nrand())
   c.clerk = coordinator.MakeClerk(o.servers, o.socket, c.initNodes(), c.id)
   c.tasks = make(map[coordinator.TaskID]*Task)
   c.currentView.ViewNum = -1
+
+	//c.viewMu.Unlock()
 
   go func() {
     for {

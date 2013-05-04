@@ -10,11 +10,13 @@ type TestCoord struct {
 	tasksFinished int
   results []int
   tasks map[TaskID]int
+	finishedTasks map[TaskID]bool
   numSubTasks int
 }
 
 func (sc *TestCoord) Init(co *Coordinator, seed int64) {
   sc.tasks = make(map[TaskID]int)
+	sc.finishedTasks = make(map[TaskID]bool)
   sc.results = make([]int, 0)
   sc.numSubTasks = 400
 	// Start a task
@@ -31,6 +33,7 @@ func (sc *TestCoord) ClientJoined(co *Coordinator, CID ClientID) {
 
 func (sc *TestCoord) ClientDead(co *Coordinator, CID ClientID) {
 	// Do nothing for now 
+	fmt.Printf("Client marked dead: %v\n", CID)
 }
 
 func (sc *TestCoord) goPy(co *Coordinator, name string, args []int, taskType int) {
@@ -53,10 +56,33 @@ func (sc *TestCoord) TaskDone(co *Coordinator,
   if !p {
     log.Fatal("TID was never created.")
   }
+	_, finished := sc.finishedTasks[TID] 
+	if finished { 
+		//fmt.Printf("Finished task repeated. Ignoring\n")
+		return
+	} 
 
+	sc.finishedTasks[TID] = true
   result := int(DoneValues["result"].(float64))
   if v == 1 {
     sc.results = append(sc.results, result)
+		/*
+		 if len(sc.results) < sc.numSubTasks && len(sc.results) > sc.numSubTasks - 5 {  
+			for task, taskType := range sc.tasks { 
+				_, taskFinished := sc.finishedTasks[task] 
+				if !taskFinished && taskType == 1 { 
+					fmt.Printf("Unfinished task: %v\n", task)
+					view := co.GetCurrentView() 
+					assts, assigned := view.TaskAssignments[task]
+					if assigned { 
+						fmt.Printf("Task %v assigned to %v\n", task, assts)
+					} else { 
+						fmt.Printf("Task %v not assigned\n", task)
+					}
+				} 
+			}
+		}*/ 
+
     if len(sc.results) == sc.numSubTasks {
       sc.goPy(co, "sum", sc.results, 2)
     }

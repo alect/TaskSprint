@@ -55,6 +55,10 @@ type Coordinator struct {
 
 } 
 
+func (co *Coordinator) GetCurrentView() View { 
+	return co.currentView
+} 
+
 const (
 	QUERY = 0
 	DONE = 1
@@ -293,6 +297,7 @@ func (co *Coordinator) AllocateTasks() {
 			
 			if found {
 				co.currentView.ViewNum++
+				//fmt.Printf("Assigning Task %v to Client %v\n", tid, cid)
 				co.currentView.TaskAssignments[tid] = append(co.currentView.TaskAssignments[tid], cid)
 				co.activeTasks[cid][tid] = true
 				co.availableClients[cid]--

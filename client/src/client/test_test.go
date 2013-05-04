@@ -134,7 +134,7 @@ func TestMultipleSimpleWithDelay(t *testing.T) {
 		coa[i] = coordinator.StartServer(kvh, i, sca[i], numTaskReplicas, seed)
 	}
 
-  numClient := 4;
+  numClient := 6;
 	fmt.Printf("Test: Multiple Clients with Join Delay\n")
 
   for i := 0; i < numClient; i++ {
@@ -148,7 +148,7 @@ func TestMultipleSimpleWithDelay(t *testing.T) {
     time.Sleep(1 * time.Second)
   }
 
-  time.Sleep(20 * time.Second)
+  time.Sleep(15 * time.Second)
 
 	fmt.Printf("  ... Passed\n")
 }
