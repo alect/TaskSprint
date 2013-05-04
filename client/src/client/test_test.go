@@ -52,7 +52,7 @@ func cleanup(coa []*coordinator.Coordinator) {
 /* 		coa[i] = coordinator.StartServer(kvh, i, sca[i], numTaskReplicas, seed) */
 /* 	} */
 
-/* 	fmt.Printf("Test: Basic Query\n") */
+/* 	fmt.Printf("Test: Single Client\n") */
 
 /*   options := &Options{ */
 /*     kvh, */
@@ -61,7 +61,7 @@ func cleanup(coa []*coordinator.Coordinator) {
 /*   } */
 /*   go Init(options) */
 
-/*   time.Sleep(10 * time.Second) */
+/*   time.Sleep(20 * time.Second) */
 
 /* 	fmt.Printf("  ... Passed\n") */
 /* } */
@@ -92,7 +92,7 @@ func TestMultipleSimple(t *testing.T) {
 	}
 
   numClient := 5;
-	fmt.Printf("Test: Basic Query\n")
+	fmt.Printf("Test: Multiple Clients\n")
 
   for i := 0; i < numClient; i++ {
     options := &Options{
