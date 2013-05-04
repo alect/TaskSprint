@@ -16,7 +16,7 @@ type TestCoord struct {
 func (sc *TestCoord) Init(co *Coordinator, seed int64) {
   sc.tasks = make(map[TaskID]int)
   sc.results = make([]int, 0)
-  sc.numSubTasks = 20
+  sc.numSubTasks = 400
 	// Start a task
   for i := 0; i < sc.numSubTasks; i++ {
     s := i * 4
@@ -55,13 +55,13 @@ func (sc *TestCoord) TaskDone(co *Coordinator,
   }
 
   result := int(DoneValues["result"].(float64))
-  fmt.Printf("Result from %d is %d\n", TID, result)
   if v == 1 {
     sc.results = append(sc.results, result)
     if len(sc.results) == sc.numSubTasks {
       sc.goPy(co, "sum", sc.results, 2)
     }
 	} else if v == 2 {
+    fmt.Printf("Result from %d is %d\n", TID, result)
     co.Finish([]TaskID{TID})
   }
 }

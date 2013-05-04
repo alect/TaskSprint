@@ -1,5 +1,6 @@
 package main
 
+import "time"
 import "coord"
 import "testing"
 import "runtime"
@@ -26,8 +27,47 @@ func cleanup(coa []*coordinator.Coordinator) {
 	}
 }
 
-func TestSimple(t *testing.T) {
-	runtime.GOMAXPROCS(4)
+/* func TestSimple(t *testing.T) { */
+/* 	runtime.GOMAXPROCS(4) */
+
+/* 	const numTaskReplicas = 1 */
+
+/* 	const nservers = 3 */
+/* 	var coa []*coordinator.Coordinator = */ 
+/*     make([]*coordinator.Coordinator, nservers) */
+/* 	var kvh []string = make([]string, nservers) */
+/* 	var sca []*coordinator.TestCoord = */
+/*     make([]*coordinator.TestCoord, nservers) */
+/* 	defer cleanup(coa) */
+
+/* 	seed := int64(0) */
+
+/* 	for i := 0; i < nservers; i++ { */
+/* 		sca[i] = coordinator.MakeTestCoord() */
+/* 	} */
+/* 	for i := 0; i < nservers; i++ { */
+/* 		kvh[i] = port("basic", i) */
+/* 	} */
+/* 	for i := 0; i < nservers; i++ { */
+/* 		coa[i] = coordinator.StartServer(kvh, i, sca[i], numTaskReplicas, seed) */
+/* 	} */
+
+/* 	fmt.Printf("Test: Basic Query\n") */
+
+/*   options := &Options{ */
+/*     kvh, */
+/*     "/tmp/ts-clientsocket", */
+/*     "./../../../libraries/client/python/testNode.py", */
+/*   } */
+/*   go Init(options) */
+
+/*   time.Sleep(10 * time.Second) */
+
+/* 	fmt.Printf("  ... Passed\n") */
+/* } */
+
+func TestMultipleSimple(t *testing.T) {
+	runtime.GOMAXPROCS(8)
 
 	const numTaskReplicas = 1
 
@@ -51,14 +91,20 @@ func TestSimple(t *testing.T) {
 		coa[i] = coordinator.StartServer(kvh, i, sca[i], numTaskReplicas, seed)
 	}
 
+  numClient := 5;
 	fmt.Printf("Test: Basic Query\n")
 
-  options := &Options{
-    kvh,
-    "/tmp/ts-clientsocket",
-    "./../../../libraries/client/python/testNode.py",
+  for i := 0; i < numClient; i++ {
+    options := &Options{
+      kvh,
+      "/tmp/ts-clientsocket" + strconv.Itoa(i),
+      "./../../../libraries/client/python/testNode.py",
+    }
+
+    go Init(options)
   }
-  Init(options)
+
+  time.Sleep(10 * time.Second)
 
 	fmt.Printf("  ... Passed\n")
 }

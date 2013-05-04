@@ -97,7 +97,7 @@ func PrintView(view *coordinator.View) {
 }
 
 func (c *Client) processView(view *coordinator.View) {
-  PrintView(view)
+  /* PrintView(view) */
   c.viewMu.Lock()
   defer c.viewMu.Unlock()
 
@@ -142,7 +142,7 @@ tasks []coordinator.TaskID) ([]coordinator.TaskID, []coordinator.TaskID) {
 
 func (c *Client) killTasks(tasks []coordinator.TaskID) {
   // Need to lock task array
-  fmt.Printf("Killing %v\n", tasks)
+  /* fmt.Printf("Killing %v\n", tasks) */
   for _, tid := range tasks {
     c.tasks[tid].status = Killed
   }
@@ -151,7 +151,7 @@ func (c *Client) killTasks(tasks []coordinator.TaskID) {
 func (c *Client) scheduleTasks(tasks []coordinator.TaskID,
 args map[coordinator.TaskID]coordinator.TaskParams) {
   // Need to lock task array
-  fmt.Printf("Scheduling %v\n", tasks)
+  /* fmt.Printf("Scheduling %v\n", tasks) */
   t := 0
   for i := 0; i < len(c.nodes) && t < len(tasks); i, t = i + 1, t + 1 {
     if c.nodes[i].status == Free {
@@ -165,8 +165,8 @@ args map[coordinator.TaskID]coordinator.TaskParams) {
 func (c *Client) runTask(task *Task) {
   // Need task lock
   node, params := task.node, task.params
-  fmt.Printf("Running task %d on %s\n", task.id, node.socket)
-  fmt.Printf("params: %v\n", params)
+  /* fmt.Printf("Running task %d on %s\n", task.id, node.socket) */
+  /* fmt.Printf("params: %v\n", params) */
 
   // Connecting to node and marking task as started
   node.status, task.status = Busy, Started
@@ -192,7 +192,7 @@ func (c *Client) runTask(task *Task) {
 
 func (c *Client) markFinished(task *Task, result map[string]interface{}) {
   // Need task lock
-  fmt.Printf("Result is %v\n", result)
+  /* fmt.Printf("Result is %v\n", result) */
   outResult := make(map[string]interface{})
   for _, k := range task.params.DoneKeys {
     if v, p := result[k]; p { outResult[k] = v }
@@ -241,7 +241,8 @@ func (c *Client) initNodes() int {
   cpus := runtime.NumCPU();
   c.nodes = make([]*Node, cpus)
   for i := 0; i < cpus; i++ {
-    socket := "/tmp/ts-client-node-" + strconv.Itoa(i)
+    socket := "/tmp/ts-client-node-"
+    socket += strconv.FormatInt(int64(c.id), 10) + "-" + strconv.Itoa(i)
     c.nodes[i] = &Node{socket, Free, nil}
 
     // Starting the subproc and copying its stdout to mine
