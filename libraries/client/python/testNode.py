@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from tests import Person # for testing only
+from test_library import Person # for testing only
 from TaskSprintNode import *
 
 class TestNode(TaskSprintNode):
