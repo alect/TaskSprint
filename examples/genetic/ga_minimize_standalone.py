@@ -5,18 +5,18 @@ import pylab
 import bisect
 import sys
 
-# Convert a fixed point representation to a float
+# Convert a fixed width representation of a point to a float representation of
+# a point
 def fixed2float(point, fprops):
-    x = point[0]
-    y = point[1]
-    x = (fprops['argmax']-fprops['argmin'])*(float(x) / (2**fprops['resolution'])) + fprops['argmin']
-    y = (fprops['argmax']-fprops['argmin'])*(float(y) / (2**fprops['resolution'])) + fprops['argmin']
-    return (x,y)
+    fl_point = []
+    for p in point:
+        fl_point.append((fprops['argmax']-fprops['argmin'])*(float(p) / (2**fprops['resolution'])) + fprops['argmin'])
+    return fl_point
 
 # Evaluate the fitness of a point on function fprops['function']
 def fitness(point, fprops):
-    (x,y) = fixed2float(point, fprops)
-    return abs(fprops['function'](x,y))
+    point = fixed2float(point, fprops)
+    return -1.0*abs(fprops['function'](point))
 
 ################################################################################
 ################################################################################
@@ -29,116 +29,108 @@ def fitness(point, fprops):
 #
 # ret   (list) (population, fitness) tuples
 def ga_generate(n, fprops):
-    p = []
-    f = []
+    population = []
 
     for i in range(n):
-        x = random.randint(0, 2**fprops['resolution'])
-        y = random.randint(0, 2**fprops['resolution'])
-        point = (x,y)
+        point = []
+        for j in range(fprops['dimensions']):
+            point.append( random.randint(0, 2**fprops['resolution']) )
 
-        p.append(point)
-        f.append(fitness(point, fprops))
+        population.append( (point, fitness(point, fprops)) )
 
-    return zip(p,f)
+    return population
 
 #
 # Evolve a population to a new generation,
 # including selection, crossover, mutation.
 #
-# args  pf              (list) population, fitness tuples
+# args  population      (list) population, fitness tuples
 #       n               (int) size of new population
 #       pr_crossover    (float) crossover probabiltiy
 #       pr_mutation     (float) mutation probability
 #       fprops          (list) function properties
 #
 # ret   (list) (population, fitness) tuples
-def ga_evolve(pf, n, pr_crossover, pr_mutation, fprops):
+def ga_evolve(population, n, pr_crossover, pr_mutation, fprops):
     # Sort population by increasing fitness
-    pf = sorted(pf, key=lambda x: x[1])[::-1]
+    population = sorted(population, key=lambda x: x[1])
 
     def crossover(p1, p2):
         # If crossover occurs, average both points into one
         if (random.random() < pr_crossover):
-            p3 = ( (p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2)
+            p3 = []
+            for j in range(len(p1)):
+                p3.append( (p1[j] + p2[j]) / 2 )
             return [p3]
 
         # Return original parents
         return [p1, p2]
 
     def mutate(p):
-        for i in range(fprops['resolution']):
-            # If mutation occurs, flip a bit
-            if (random.random() < pr_mutation):
-                p = (p[0] ^ 2**i, p[1])
-            if (random.random() < pr_mutation):
-                p = (p[0], p[1] ^ 2**i)
-
+        for i in range(fprops['dimensions']):
+            for j in range(fprops['resolution']):
+                # If mutation occurs, flip a bit
+                if (random.random() < pr_mutation):
+                    p[i] = p[i] ^ 2**j
         return p
 
-    p = []
-    f = []
+    population_evolved = []
 
-    while len(p) < n:
-        # Choose new member p1 by elitist selection
-        i = len(pf)-1
-        p1 = pf[i][0]
-        del pf[i]
-
-        # Choose new member p2 by elitist selection
-        i = len(pf)-1
-        p2 = pf[i][0]
-        del pf[i]
+    while len(population_evolved) < n or len(population) < 2:
+        # Choose fit member p1 by elitist selection
+        p1 = population.pop()[0]
+        # Choose fit member p2 by elitist selection
+        p2 = population.pop()[0]
 
         # Crossover p1 and p2
-        new_members = crossover(p1, p2)
+        p_new = crossover(p1, p2)
         # Mutate children
-        new_members = [mutate(m) for m in new_members]
+        p_new = [mutate(p) for p in p_new]
 
-        # Add them to our pool
-        p += new_members
-        f += [fitness(m, fprops) for m in new_members]
+        # Add them to our evolved population
+        population_evolved += [ (p, fitness(p, fprops)) for p in p_new ]
 
-    return zip(p, f)
+    return population_evolved
 
 ################################################################################
 ################################################################################
 
-fprops = {}
-fprops['argmin'] = -5.0
-fprops['argmax'] = 5.0
-fprops['resolution'] = 20
-fprops['epsilon'] = 0.00005
-fprops['function'] = lambda x,y: x**2 + y**2
+F = {}
+F['argmin'] = -5.0
+F['argmax'] = 5.0
+F['dimensions'] = 3
+F['resolution'] = 20
+F['epsilon'] = 0.0005
+F['function'] = lambda p: p[0]**2 + p[1]**2 + p[2]**2
 
-population_size = 100
-population_new = 0.50
-pr_crossover = 0.30
-pr_mutation = 0.02
+POPULATION_SIZE     = 100
+POPULATION_SIZE_NEW = 50
+PR_CROSSOVER        = 0.30
+PR_MUTATION         = 0.001
 
 ################################################################################
 
 # Generate inital population and fitness
-pf = ga_generate(population_size, fprops)
+population = ga_generate(POPULATION_SIZE, F)
 
 # Enter GA loop
-for i in range(1000):
-    # Sort and print our top 5 fitnesses
-    pf = sorted(pf, key=lambda x: x[1])
-    print i, [x[1] for x in pf[0:5]]
+for generation in range(1000):
+    # Debugging: Sort and print our top 5 fitnesses
+    population = sorted(population, key=lambda x: x[1])
+    print generation, [x[1] for x in population[-5:]]
     sys.stdout.flush()
 
     # Break if the best fitness makes the epsilon
-    if pf[0][1] < fprops['epsilon']:
+    if abs(population[-1][1]) < F['epsilon']:
         break
 
     # Evolve
-    pf = ga_evolve(pf, int(population_new*len(pf)), pr_crossover, pr_mutation, fprops)
-    # Insert more random members to fill population
-    pf += ga_generate(population_size - len(pf), fprops)
+    population = ga_evolve(population, POPULATION_SIZE_NEW, PR_CROSSOVER, PR_MUTATION, F)
+    # Insert more random members to fill population to POPULATION_SIZE
+    population += ga_generate(POPULATION_SIZE - len(population), F)
 
 ################################################################################
 
-print "\nNumber of generations:", i
-print "(x,y) = ", fixed2float(pf[0][0], fprops), "; f(x,y) =", fitness(pf[0][0], fprops)
+print "\nNumber of generations:", generation
+print "p = ", fixed2float(population[-1][0], F), "; fitness(p) =", population[-1][1]
 
