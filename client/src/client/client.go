@@ -153,7 +153,7 @@ args map[coordinator.TaskID]coordinator.TaskParams) {
   // Need to lock task array
   /* fmt.Printf("Scheduling %v\n", tasks) */
 
-	/*
+	
 	t := 0
   for i := 0; i < len(c.nodes) && t < len(tasks); i, t = i + 1, t + 1 {
     if c.nodes[i].status == Free {
@@ -162,7 +162,7 @@ args map[coordinator.TaskID]coordinator.TaskParams) {
       go c.runTask(newTask)
     }
   }
-	*/
+	/*
 	// Try to schedule each task on a free node
 	for t := 0; t < len(tasks); t++ { 
 		for i := 0; i < len(c.nodes); i++ { 
@@ -175,7 +175,8 @@ args map[coordinator.TaskID]coordinator.TaskParams) {
 				break
 			} 
 		}
-	} 
+	}
+`*/ 
 }
 
 func (c *Client) runTask(task *Task) {
