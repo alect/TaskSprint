@@ -33,7 +33,7 @@ func (sc *TestCoord) ClientJoined(co *Coordinator, CID ClientID) {
 
 func (sc *TestCoord) ClientDead(co *Coordinator, CID ClientID) {
 	// Do nothing for now 
-	fmt.Printf("Client marked dead: %v\n", CID)
+	//fmt.Printf("Client marked dead: %v\n", CID)
 }
 
 func (sc *TestCoord) goPy(co *Coordinator, name string, args []int, taskType int) {
@@ -56,11 +56,6 @@ func (sc *TestCoord) TaskDone(co *Coordinator,
   if !p {
     log.Fatal("TID was never created.")
   }
-	_, finished := sc.finishedTasks[TID] 
-	if finished { 
-		//fmt.Printf("Finished task repeated. Ignoring\n")
-		return
-	} 
 
 	sc.finishedTasks[TID] = true
   result := int(DoneValues["result"].(float64))

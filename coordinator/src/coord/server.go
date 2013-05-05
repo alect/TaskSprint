@@ -48,6 +48,7 @@ type Coordinator struct {
 	// the number of nodes each client has available right now
 	availableClients map[ClientID]int
 	killedTasks map[TaskID]bool // Dead tasks that we shouldn't assign
+	finishedTasks map[TaskID]bool // Tasks we've sent to the library indicating they've been finished
 
 	// Output info for when the task is done 
 	isFinished bool 
@@ -164,7 +165,11 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 		return cloneView(co.currentView)
 	} else if op.Op == DONE { 
 		// Handle finished tasks 
-		co.dc.TaskDone(co, op.TID, op.DoneValues)
+		_, alreadyFinished := co.finishedTasks[op.TID]
+		if !alreadyFinished { 
+			co.finishedTasks[op.TID] = true
+			co.dc.TaskDone(co, op.TID, op.DoneValues)
+		} 
 		// Check to see if this is an active task for this client 
 		_, active := co.activeTasks[op.CID][op.TID] 
 		if active { 
@@ -429,6 +434,7 @@ func StartServer(servers []string, me int, dc DeveloperCoord, numTaskReplicas in
 	co.activeTasks = map[ClientID]map[TaskID]bool{}
 	co.availableClients = map[ClientID]int{}
 	co.killedTasks = map[TaskID]bool{}
+	co.finishedTasks = map[TaskID]bool{}
 
 	co.isFinished = false
 
