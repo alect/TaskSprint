@@ -173,6 +173,8 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 		// Check to see if this is an active task for this client 
 		_, active := co.activeTasks[op.CID][op.TID] 
 		if active { 
+			co.currentView.FinishedTasks[op.TID] = append(co.currentView.FinishedTasks[op.TID], op.CID)
+			co.currentView.ViewNum++
 			delete(co.activeTasks[op.CID], op.TID)
 			co.availableClients[op.CID]++
 		}
@@ -323,7 +325,7 @@ func (co *Coordinator) ClientDead(CID ClientID) {
 	delete(co.currentView.ClientInfo, CID)
 
 	// Now, find tasks this client is responsible for and remove the client 
-	for tid, clients := range co.currentView.TaskAssignments { 
+	for tid, clients := range co.currentView.TaskAssignments {
 		foundClient := false 
 		newAsst := make([]ClientID, 0)
 		for _, client := range clients { 
@@ -337,10 +339,23 @@ func (co *Coordinator) ClientDead(CID ClientID) {
 			co.currentView.TaskAssignments[tid] = newAsst
 			// reassign this task?
 			co.unassignedTasks.PushFront(tid)
-		} 
-	} 
-
-} 
+		}
+	}
+	for tid, clients := range co.currentView.FinishedTasks {
+		foundClient := false 
+		newFinished := make([]ClientID, 0)
+		for _, client := range clients {
+			if client == CID {
+				foundClient = true
+			} else {
+				newFinished = append(newFinished, client)
+			}
+		}
+		if foundClient {
+			co.currentView.FinishedTasks[tid] = newFinished
+		}
+	}
+}
 
 
 // RPC functions 
@@ -368,6 +383,7 @@ func (co *Coordinator) StartTask(params TaskParams) TaskID {
 	co.nextTID++
 	co.currentView.TaskParams[tid] = params
 	co.currentView.TaskAssignments[tid] = make([]ClientID, 0)
+	co.currentView.FinishedTasks[tid] = make([]ClientID, 0)
 	co.currentView.ViewNum++
 	// Add this task to a list of unassigned tasks 
 	// It will be assigned to clients as appropriate
@@ -381,6 +397,7 @@ func (co *Coordinator) KillTask(tid TaskID) {
 	// Kills a task by removing its assignment from the view
 	// Can be used to allow clients to discard data that's no longer needed
 	delete(co.currentView.TaskParams, tid)
+	delete(co.currentView.FinishedTasks, tid)
 	// Release clients for whom the task is currently active
 	for _, cid := range co.currentView.TaskAssignments[tid] {
 		_, active := co.activeTasks[cid][tid]
@@ -420,7 +437,7 @@ func StartServer(servers []string, me int, dc DeveloperCoord, numTaskReplicas in
 	co := new(Coordinator)
 	co.me = me 
 	co.dc = dc 
-	co.currentView = View{0, false, nil, map[TaskID]TaskParams{}, map[TaskID][]ClientID{}, map[ClientID]string{}}
+	co.currentView = View{ 0, false, nil, map[TaskID]TaskParams{}, map[TaskID][]ClientID{}, map[TaskID][]ClientID{}, map[TaskID]TaskInfo{}, map[ClientID]string{}}
 	co.initialized = false
 	co.leaderID = 0
 	co.leaderNum = 0	

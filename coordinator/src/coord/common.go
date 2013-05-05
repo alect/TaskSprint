@@ -22,8 +22,14 @@ type View struct {
 	outputTasks []TaskID
 
 	// TODO: fill out the view
+	
+	// The old task info 
 	TaskParams map[TaskID]TaskParams
 	TaskAssignments map[TaskID][]ClientID
+	FinishedTasks map[TaskID][]ClientID
+
+	TaskInfo map[TaskID]TaskInfo
+
 	ClientInfo map[ClientID]string // How to contact a particular client. 
 } 
 
@@ -36,15 +42,43 @@ func cloneView(oldView View) View {
 		newView.TaskParams[k] = v
 	} 
 	newView.TaskAssignments = map[TaskID][]ClientID{}
-	for k, v := range oldView.TaskAssignments { 
+	for k, v := range oldView.TaskAssignments {
 		newView.TaskAssignments[k] = v
-	} 
+	}
+	newView.FinishedTasks = map[TaskID][]ClientID{}
+	for k, v := range oldView.FinishedTasks {
+		newView.FinishedTasks[k] = v
+	}
 	newView.ClientInfo = map[ClientID]string{}
-	for k, v := range oldView.ClientInfo { 
+	for k, v := range oldView.ClientInfo {
 		newView.ClientInfo[k] = v
-	} 
+	}
+	// Build a new task info map out of the existing info 
+	newView.TaskInfo = map[TaskID]TaskInfo{}
+	for tid, params := range newView.TaskParams { 
+		finishedClients := make([]ClientID, len(newView.FinishedTasks[tid]))
+		copy(finishedClients, newView.FinishedTasks[tid])
+		// Figure out what the pending clients are 
+		pendingClients := make([]ClientID, len(newView.TaskAssignments[tid]) - len(finishedClients))
+		i := 0
+		for _, cid := range newView.TaskAssignments[tid] {
+			// Check to see if this cid is already finished
+			cidFinished := false 
+			for _, finishedCid := range finishedClients {
+				if cid == finishedCid {
+					cidFinished = true
+					break
+				}
+			}
+			if !cidFinished {
+				pendingClients[i] = cid
+				i++
+			}
+		}
+		newView.TaskInfo[tid] = TaskInfo{ params, pendingClients, finishedClients }
+	}
 	return newView
-} 
+}
 
 type TaskParams struct { 
 	FuncName string 
@@ -56,6 +90,13 @@ type TaskParams struct {
 	PreReqKey []string // The key for the data that should be requested of the pre-req tasks 
 	BaseObject interface{} // Some base object for the task to start with 
 } 
+
+type TaskInfo struct { 
+	Params TaskParams 
+	PendingClients []ClientID
+	FinishedClients []ClientID
+} 
+
 
 
 type QueryArgs struct { 
