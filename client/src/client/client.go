@@ -145,7 +145,16 @@ func (c *Client) killTasks(tasks []coordinator.TaskID) {
   // Need to lock task array
   /* fmt.Printf("Killing %v\n", tasks) */
   for _, tid := range tasks {
-    c.tasks[tid].status = Killed
+    task := c.tasks[tid]
+    node := task.node
+
+    c.killNode(node)
+    task.node = nil
+    task.status = Killed
+
+    node.task = nil
+    node.status = Free
+    c.startNode(node)
   }
 }
 
@@ -246,21 +255,24 @@ func (c *Client) startServer(socket string) {
   }
 }
 
+func (c *Client) startNode(node *Node) {
+  // Starting the subproc and copying its stdout to mine
+  cmd := exec.Command(c.options.program, node.socket)
+  stdout, outerr := cmd.StdoutPipe()
+  if outerr != nil { log.Fatal(outerr) }
+  if err := cmd.Start(); err != nil { log.Fatal(err) }
+  go io.Copy(os.Stdout, stdout)
+}
+
 func (c *Client) initNodes() int {
   cpus := runtime.NumCPU();
   c.nodes = make([]*Node, cpus)
   for i := 0; i < cpus; i++ {
     socket := "/tmp/ts-client-node-"
     socket += strconv.FormatInt(int64(c.id), 10) + "-" + strconv.Itoa(i)
-    c.nodes[i] = &Node{socket, Free, nil}
-
-    // Starting the subproc and copying its stdout to mine
-    cmd := exec.Command(c.options.program, socket)
-    stdout, outerr := cmd.StdoutPipe()
-    if outerr != nil { log.Fatal(outerr) }
-    if err := cmd.Start(); err != nil { log.Fatal(err) }
-    go io.Copy(os.Stdout, stdout)
-
+    node := &Node{socket, Free, nil}
+    c.nodes[i] = node
+    c.startNode(node)
   }
   time.Sleep(250 * time.Millisecond)
   fmt.Printf("%d nodes initialized.\n", cpus)
@@ -309,15 +321,19 @@ func (c *Client) Start() {
   c.startServer(c.options.socket)
 }
 
+func (c *Client) killNode(node *Node) {
+  params := new (coordinator.TaskParams)
+  params.FuncName = "kill"
+  params.BaseObject = "[]"
+  t := &Task{-1, node, Pending, *params, nil}
+  c.runTask(t);
+}
+
 func (c *Client) Kill() {
   c.dead = true
 
   for _, node := range c.nodes {
-    params := new (coordinator.TaskParams)
-    params.FuncName = "kill"
-    params.BaseObject = "[]"
-    t := &Task{-1, node, Pending, *params, nil}
-    c.runTask(t);
+    c.killNode(node)
   }
 }
 
