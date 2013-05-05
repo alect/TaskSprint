@@ -63,6 +63,7 @@ type Client struct {
   options *Options
   nodes []*Node
   tasks map[coordinator.TaskID]*Task
+  dead bool
 }
 
 type GetDataArgs struct {
@@ -153,11 +154,12 @@ args map[coordinator.TaskID]coordinator.TaskParams) {
   // Need to lock task array
   /* fmt.Printf("Scheduling %v\n", tasks) */
   t := 0
-  for i := 0; i < len(c.nodes) && t < len(tasks); i, t = i + 1, t + 1 {
+  for i := 0; i < len(c.nodes) && t < len(tasks); i++ {
     if c.nodes[i].status == Free {
       newTask := &Task{tasks[t], c.nodes[i], Pending, args[tasks[t]], nil}
       c.tasks[tasks[t]] = newTask
       go c.runTask(newTask)
+      t++
     }
   }
 }
@@ -165,7 +167,7 @@ args map[coordinator.TaskID]coordinator.TaskParams) {
 func (c *Client) runTask(task *Task) {
   // Need task lock
   node, params := task.node, task.params
-  /* fmt.Printf("Running task %d on %s\n", task.id, node.socket) */
+  /* fmt.Printf("Running task\t %d on\t %s\n", task.id, node.socket) */
   /* fmt.Printf("params: %v\n", params) */
 
   // Connecting to node and marking task as started
@@ -176,6 +178,12 @@ func (c *Client) runTask(task *Task) {
   // Sending data 
   data := fmt.Sprintf("[\"%s\", %s]", params.FuncName, params.BaseObject)
   fmt.Fprintf(conn, data)
+
+  // Special kill-task handling
+  if task.id == -1 { 
+    conn.Close()
+    return 
+  }
 
   // Waiting for result
   buffer := make([]byte, 1024)
@@ -191,21 +199,20 @@ func (c *Client) runTask(task *Task) {
 }
 
 func (c *Client) markFinished(task *Task, result map[string]interface{}) {
-  // Need task lock
-  /* fmt.Printf("Result is %v\n", result) */
   outResult := make(map[string]interface{})
   for _, k := range task.params.DoneKeys {
     if v, p := result[k]; p { outResult[k] = v }
   }
 
   c.clerk.Done(task.id, outResult)
+
   node := task.node
   node.task = nil
   node.status = Free
 
   task.data = result
-  task.status = Finished
   task.node = nil
+  task.status = Finished
 }
 
 func (c *Client) tick() {
@@ -226,13 +233,15 @@ func (c *Client) startServer(socket string) {
   }
   c.l = l
 
-  for {
+  for !c.dead {
     conn, err := c.l.Accept()
     if err != nil {
       fmt.Printf("RPC Error: %v\n", err.Error())
       c.l.Close()
-    } else {
+    } else if !c.dead {
       go rpcs.ServeConn(conn)
+    } else {
+      return
     }
   }
 }
@@ -252,9 +261,9 @@ func (c *Client) initNodes() int {
     if err := cmd.Start(); err != nil { log.Fatal(err) }
     go io.Copy(os.Stdout, stdout)
 
-    time.Sleep(250 * time.Millisecond)
-    fmt.Printf("Node at %s started.\n", socket)
   }
+  time.Sleep(250 * time.Millisecond)
+  fmt.Printf("%d nodes initialized.\n", cpus)
   return cpus
 }
 
@@ -283,16 +292,33 @@ func Init(o *Options) *Client {
   c.clerk = coordinator.MakeClerk(o.servers, o.socket, c.initNodes(), c.id)
   c.tasks = make(map[coordinator.TaskID]*Task)
   c.currentView.ViewNum = -1
+  c.dead = false
 
+  return c
+}
+
+// May never return
+func (c *Client) Start() {
   go func() {
-    for {
+    for !c.dead {
       c.tick()
       time.Sleep(250 * time.Millisecond)
     }
   }()
 
-  c.startServer(o.socket)
-  return c
+  c.startServer(c.options.socket)
+}
+
+func (c *Client) Kill() {
+  c.dead = true
+
+  for _, node := range c.nodes {
+    params := new (coordinator.TaskParams)
+    params.FuncName = "kill"
+    params.BaseObject = "[]"
+    t := &Task{-1, node, Pending, *params, nil}
+    c.runTask(t);
+  }
 }
 
 func nrand() int64 {
@@ -303,7 +329,6 @@ func nrand() int64 {
 }
 
 func main() {
-  opts := InitFlags()
-  Init(opts)
+  Init(InitFlags()).Start()
 }
 

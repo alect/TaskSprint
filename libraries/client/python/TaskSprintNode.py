@@ -11,7 +11,6 @@ class TaskSprintNode:
     self.clear_socket()
     self.socket.bind(self.socket_name)
     self.socket.listen(1)
-    print "Listening for tasks..."
     while True:
       (clientsocket, address) = self.socket.accept()
       self.recv(clientsocket, clientsocket.recv(4096))
