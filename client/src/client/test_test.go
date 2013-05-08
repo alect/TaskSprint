@@ -9,7 +9,7 @@ import "os"
 import "fmt"
 
 func port(tag string, host int) string {
-	s := "/var/tmp/824-"
+	s := "/tmp/824-"
 	s += strconv.Itoa(os.Getuid()) + "/"
 	os.Mkdir(s, 0777)
 	s += "sm-"
@@ -27,277 +27,55 @@ func cleanup(coa []*coordinator.Coordinator) {
 	}
 }
 
-func TestSimple(t *testing.T) {
-	runtime.GOMAXPROCS(4)
-
-	const numTaskReplicas = 1
-
-	const nservers = 3
-	var coa []*coordinator.Coordinator = 
-    make([]*coordinator.Coordinator, nservers)
-	var kvh []string = make([]string, nservers)
-	var sca []*coordinator.TestCoord =
-    make([]*coordinator.TestCoord, nservers)
-	defer cleanup(coa)
-
-	seed := int64(0)
-
-	for i := 0; i < nservers; i++ {
-		sca[i] = coordinator.MakeTestCoord()
-	}
-	for i := 0; i < nservers; i++ {
-		kvh[i] = port("basic", i)
-	}
-	for i := 0; i < nservers; i++ {
-		coa[i] = coordinator.StartServer(kvh, i, sca[i], numTaskReplicas, seed)
-	}
-
-  numClient := 1;
-	fmt.Printf("Test: Single Client\n")
-
-  clients := make([]*Client, numClient)
-  for i := 0; i < numClient; i++ {
-    options := &Options{
-      kvh,
-      "/tmp/ts-clientsocket" + strconv.Itoa(i),
-      "./../../../libraries/client/python/testNode.py",
-    }
-
-    clients[i] = Init(options)
-  }
-
-
+func Run(clients []*Client, nservers int, sca []*coordinator.TestCoord, delay int, fail bool) {
   for _, c := range clients {
     go c.Start()
   }
 
-
-  // Check to see when we're done
-  endTime := time.Now().Add(15 * time.Second)
-  finished, timeout, result := 0, false, 0
-  for finished < nservers && !timeout {
-    finished = 0
-    for _, c := range sca {
-      result = c.Result()
-      if result > 0 { finished++ }
-    }
-    time.Sleep(750 * time.Millisecond)
-    timeout = time.Now().After(endTime)
-  }
-
-
-  if !timeout && finished == nservers && result == 1279200 {
-    fmt.Printf("  ... Passed\n")
-  } else {
-    fmt.Printf("  ... Failed {expected %d, got %d}\n", 1279200, result)
-  }
-
-  for _, c := range clients {
-    c.Kill()
-  }
-
-}
-
-func TestMultipleSimple(t *testing.T) {
-	runtime.GOMAXPROCS(8)
-
-	const numTaskReplicas = 1
-
-	const nservers = 3
-	var coa []*coordinator.Coordinator = 
-    make([]*coordinator.Coordinator, nservers)
-	var kvh []string = make([]string, nservers)
-	var sca []*coordinator.TestCoord =
-    make([]*coordinator.TestCoord, nservers)
-	defer cleanup(coa)
-
-	seed := int64(0)
-
-	for i := 0; i < nservers; i++ {
-		sca[i] = coordinator.MakeTestCoord()
-	}
-	for i := 0; i < nservers; i++ {
-		kvh[i] = port("basic", i)
-	}
-	for i := 0; i < nservers; i++ {
-		coa[i] = coordinator.StartServer(kvh, i, sca[i], numTaskReplicas, seed)
-	}
-
-  numClient := 7;
-	fmt.Printf("Test: Multiple Clients\n")
-
-  clients := make([]*Client, numClient)
-  for i := 0; i < numClient; i++ {
-    options := &Options{
-      kvh,
-      "/tmp/ts-clientsocket" + strconv.Itoa(i),
-      "./../../../libraries/client/python/testNode.py",
-    }
-
-    clients[i] = Init(options)
-  }
-
-  for _, c := range clients {
-    go c.Start()
-  }
-
-  // Time to finish the thing
-  time.Sleep(10 * time.Second)
-
-  for _, c := range clients {
-    c.Kill()
-  }
-
-	fmt.Printf("  ... Passed\n")
-}
-
-func TestMultipleSimpleWithDelay(t *testing.T) {
-	runtime.GOMAXPROCS(8)
-
-	const numTaskReplicas = 1
-
-	const nservers = 3
-	var coa []*coordinator.Coordinator = 
-    make([]*coordinator.Coordinator, nservers)
-	var kvh []string = make([]string, nservers)
-	var sca []*coordinator.TestCoord =
-    make([]*coordinator.TestCoord, nservers)
-	defer cleanup(coa)
-
-	seed := int64(0)
-
-	for i := 0; i < nservers; i++ {
-		sca[i] = coordinator.MakeTestCoord()
-	}
-	for i := 0; i < nservers; i++ {
-		kvh[i] = port("basic", i)
-	}
-	for i := 0; i < nservers; i++ {
-		coa[i] = coordinator.StartServer(kvh, i, sca[i], numTaskReplicas, seed)
-	}
-
-  numClient := 7;
-	fmt.Printf("Test: Multiple Clients with Join Delay\n")
-
-  clients := make([]*Client, numClient)
-  for i := 0; i < numClient; i++ {
-    options := &Options{
-      kvh,
-      "/tmp/ts-clientsocket" + strconv.Itoa(i),
-      "./../../../libraries/client/python/testNode.py",
-    }
-
-    clients[i] = Init(options)
-  }
-
-  for _, c := range clients {
-    go c.Start()
-    time.Sleep(1 * time.Second)
-  }
-
-  // Time to finish the thing
-  time.Sleep(10 * time.Second)
-
-  for _, c := range clients {
-    c.Kill()
-  }
-
-	fmt.Printf("  ... Passed\n")
-}
-
-func TestMultipleQuitThenJoin(t *testing.T) {
-	runtime.GOMAXPROCS(8)
-
-	const numTaskReplicas = 1
-
-	const nservers = 3
-	var coa []*coordinator.Coordinator = 
-    make([]*coordinator.Coordinator, nservers)
-	var kvh []string = make([]string, nservers)
-	var sca []*coordinator.TestCoord =
-    make([]*coordinator.TestCoord, nservers)
-	defer cleanup(coa)
-
-	seed := int64(0)
-
-	for i := 0; i < nservers; i++ {
-		sca[i] = coordinator.MakeTestCoord()
-	}
-	for i := 0; i < nservers; i++ {
-		kvh[i] = port("basic", i)
-	}
-	for i := 0; i < nservers; i++ {
-		coa[i] = coordinator.StartServer(kvh, i, sca[i], numTaskReplicas, seed)
-	}
-
-  numClient := 4;
-	fmt.Printf("Test: Multiple Clients with Sync Join/Quit\n")
-
-  clients := make([]*Client, numClient)
-  for i := 0; i < numClient; i++ {
-    options := &Options{
-      kvh,
-      "/tmp/ts-clientsocket" + strconv.Itoa(i),
-      "./../../../libraries/client/python/testNode.py",
-    }
-
-    clients[i] = Init(options)
-  }
-
-  for _, c := range clients {
-    go c.Start()
-  }
-
-  // Let them work for a bit, then kill them
-  time.Sleep(3 * time.Second)
+  Poll(clients, nservers, sca, delay, 1279200, fail)
 
   for _, c := range clients {
     c.Kill()
   }
 
   // Make sure they're dead
-  time.Sleep(1 * time.Second)
-
-  // Start them again
-  clients = make([]*Client, numClient)
-  for i := 0; i < numClient; i++ {
-    options := &Options{
-      kvh,
-      "/tmp/ts-clientsocket" + strconv.Itoa(i),
-      "./../../../libraries/client/python/testNode.py",
-    }
-
-    clients[i] = Init(options)
-  }
-
-  for _, c := range clients {
-    go c.Start()
-  }
-
-  // Let them work for a bit, then they should be done
-  time.Sleep(6 * time.Second)
-
-  for _, c := range clients {
-    c.Kill()
-  }
-
-	fmt.Printf("  ... Passed\n")
+  time.Sleep(2 * time.Second)
 }
 
-func TestMultipleOOSQuitThenJoin(t *testing.T) {
+func Poll(clients []*Client, nservers int, sca []*coordinator.TestCoord, delay int, expected int, fail bool) {
+  endTime := time.Now().Add(time.Duration(delay) * time.Second)
+  finished, timeout, result := 0, false, 0
+  for finished < nservers && !timeout {
+    finished = 0
+    for _, c := range sca {
+      result = c.Result()
+      if result == 0 { continue }
+      if result == expected { finished++
+      } else { finished = nservers; break; }
+    }
+    timeout = time.Now().After(endTime)
+    time.Sleep(750 * time.Millisecond)
+  }
+
+  if fail {
+    if !timeout && finished == nservers && result == expected {
+      fmt.Printf("  ... Passed\n")
+    } else if timeout {
+      fmt.Printf("FAIL: {timeout} \n", result)
+    } else {
+      fmt.Printf("FAIL: {expected %d, got %d}\n", expected, result)
+    }
+  }
+}
+
+func CreateCoords(nservers, numTaskReplicas int, seed int64) ([]*coordinator.Coordinator, []string, []*coordinator.TestCoord) {
 	runtime.GOMAXPROCS(8)
 
-	const numTaskReplicas = 1
-
-	const nservers = 3
 	var coa []*coordinator.Coordinator = 
     make([]*coordinator.Coordinator, nservers)
 	var kvh []string = make([]string, nservers)
 	var sca []*coordinator.TestCoord =
     make([]*coordinator.TestCoord, nservers)
-	defer cleanup(coa)
-
-	seed := int64(0)
 
 	for i := 0; i < nservers; i++ {
 		sca[i] = coordinator.MakeTestCoord()
@@ -309,20 +87,102 @@ func TestMultipleOOSQuitThenJoin(t *testing.T) {
 		coa[i] = coordinator.StartServer(kvh, i, sca[i], numTaskReplicas, seed)
 	}
 
-  numClient := 4;
-	fmt.Printf("Test: Multiple Clients with Out Of Sync Join/Quit\n")
+  return coa, kvh, sca
+}
 
+func CreateClients(numClient int, kvh []string) []*Client {
   clients := make([]*Client, numClient)
   for i := 0; i < numClient; i++ {
     options := &Options{
       kvh,
-      "/tmp/ts-clientsocket" + strconv.Itoa(i),
+      port("clientsocket", i),
       "./../../../libraries/client/python/testNode.py",
     }
 
     clients[i] = Init(options)
   }
 
+  return clients
+}
+
+func TestSimple(t *testing.T) {
+	fmt.Printf("Test: Single Client\n")
+
+  // Set up coordinators and clients
+  numTaskReplicas, nservers, numClient := 1, 3, 1;
+  coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0)
+  clients := CreateClients(numClient, kvh)
+
+  // Run the computation, timeout in 10 seconds
+  Run(clients, nservers, sca, 25, true)
+
+  // Cleanup the coordinators
+  cleanup(coa)
+}
+
+func TestMultipleSimple(t *testing.T) {
+	fmt.Printf("Test: Multiple Clients\n")
+
+  // Set up coordinators and clients
+  numTaskReplicas, nservers, numClient := 1, 3, 7;
+  coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0)
+  clients := CreateClients(numClient, kvh)
+
+  // Run the computation, timeout in 10 seconds
+  Run(clients, nservers, sca, 10, true)
+
+  // Cleanup the coordinators
+  cleanup(coa)
+}
+
+func TestMultipleSimpleWithDelay(t *testing.T) {
+	fmt.Printf("Test: Multiple Clients with Join Delay\n")
+
+  numTaskReplicas, nservers, numClient := 1, 3, 5;
+  coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0)
+  clients := CreateClients(numClient, kvh)
+
+  for _, c := range clients {
+    go c.Start()
+    time.Sleep(2 * time.Second)
+  }
+
+  Poll(clients, nservers, sca, 10, 1279200, true)
+
+  for _, c := range clients {
+    c.Kill()
+  }
+
+  cleanup(coa)
+}
+
+func TestMultipleQuitThenJoin(t *testing.T) {
+	fmt.Printf("Test: Multiple Clients with Sync Join/Quit\n")
+
+  numTaskReplicas, nservers := 1, 3;
+  coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0)
+
+  // Starting first batch of clients
+  numClient := 4
+  clients := CreateClients(numClient, kvh)
+  Run(clients, nservers, sca, 4, false)
+
+  // Start them again
+  numClient = 4
+  clients = CreateClients(numClient, kvh)
+  Run(clients, nservers, sca, 8, true)
+
+  // Cleanup coordinators
+  cleanup(coa)
+}
+
+func TestMultipleOOSQuitThenJoin(t *testing.T) {
+	fmt.Printf("Test: Multiple Clients with Out Of Sync Join/Quit\n")
+  numTaskReplicas, nservers, numClient := 1, 3, 4;
+  coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0)
+
+  // First round
+  clients := CreateClients(numClient, kvh)
   for _, c := range clients {
     time.Sleep(time.Second)
     go c.Start()
@@ -333,29 +193,19 @@ func TestMultipleOOSQuitThenJoin(t *testing.T) {
     time.Sleep(time.Second)
   }
 
-  // Start them again
-  clients = make([]*Client, numClient)
-  for i := 0; i < numClient; i++ {
-    options := &Options{
-      kvh,
-      "/tmp/ts-clientsocket" + strconv.Itoa(i),
-      "./../../../libraries/client/python/testNode.py",
-    }
-
-    clients[i] = Init(options)
-  }
-
+  // Second round
+  clients = CreateClients(numClient, kvh)
   for _, c := range clients {
     time.Sleep(time.Second)
     go c.Start()
   }
 
   // Let them work for a bit, then they should be done
-  time.Sleep(5 * time.Second)
+  Poll(clients, nservers, sca, 5, 1279200, true)
 
   for _, c := range clients {
     c.Kill()
   }
 
-	fmt.Printf("  ... Passed\n")
+  cleanup(coa)
 }

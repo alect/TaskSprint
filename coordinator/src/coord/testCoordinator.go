@@ -64,7 +64,6 @@ func (sc *TestCoord) TaskDone(co *Coordinator,
       sc.goPy(co, "sum", sc.results, 2)
     }
 	} else if v == 2 {
-    fmt.Printf("Result from %d is %d\n", TID, result)
     co.Finish([]TaskID{TID})
     sc.result = result
   }

@@ -274,7 +274,7 @@ func (c *Client) initNodes() int {
     c.nodes[i] = node
     c.startNode(node)
   }
-  time.Sleep(250 * time.Millisecond)
+  time.Sleep(400 * time.Millisecond)
   fmt.Printf("%d nodes initialized.\n", cpus)
   return cpus
 }
