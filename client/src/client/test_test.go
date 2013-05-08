@@ -71,10 +71,26 @@ func TestSimple(t *testing.T) {
     go c.Start()
   }
 
-  // Time to finish the thing
-  time.Sleep(15 * time.Second)
 
-	fmt.Printf("  ... Passed\n")
+  // Check to see when we're done
+  endTime := time.Now().Add(15 * time.Second)
+  finished, timeout, result := 0, false, 0
+  for finished < nservers && !timeout {
+    finished = 0
+    for _, c := range sca {
+      result = c.Result()
+      if result > 0 { finished++ }
+    }
+    time.Sleep(750 * time.Millisecond)
+    timeout = time.Now().After(endTime)
+  }
+
+
+  if !timeout && finished == nservers && result == 1279200 {
+    fmt.Printf("  ... Passed\n")
+  } else {
+    fmt.Printf("  ... Failed {expected %d, got %d}\n", 1279200, result)
+  }
 
   for _, c := range clients {
     c.Kill()

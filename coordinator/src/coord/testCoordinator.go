@@ -10,13 +10,12 @@ type TestCoord struct {
 	tasksFinished int
   results []int
   tasks map[TaskID]int
-	finishedTasks map[TaskID]bool
   numSubTasks int
+  result int
 }
 
 func (sc *TestCoord) Init(co *Coordinator, seed int64) {
   sc.tasks = make(map[TaskID]int)
-	sc.finishedTasks = make(map[TaskID]bool)
   sc.results = make([]int, 0)
   sc.numSubTasks = 400
 	// Start a task
@@ -56,32 +55,10 @@ func (sc *TestCoord) TaskDone(co *Coordinator,
   if !p {
     log.Fatal("TID was never created.")
   }
-	_, finished := sc.finishedTasks[TID] 
-	if finished { 
-		//fmt.Printf("Finished task repeated. Ignoring\n")
-		return
-	} 
 
-	sc.finishedTasks[TID] = true
   result := int(DoneValues["result"].(float64))
   if v == 1 {
     sc.results = append(sc.results, result)
-		/*
-		 if len(sc.results) < sc.numSubTasks && len(sc.results) > sc.numSubTasks - 5 {  
-			for task, taskType := range sc.tasks { 
-				_, taskFinished := sc.finishedTasks[task] 
-				if !taskFinished && taskType == 1 { 
-					fmt.Printf("Unfinished task: %v\n", task)
-					view := co.GetCurrentView() 
-					assts, assigned := view.TaskAssignments[task]
-					if assigned { 
-						fmt.Printf("Task %v assigned to %v\n", task, assts)
-					} else { 
-						fmt.Printf("Task %v not assigned\n", task)
-					}
-				} 
-			}
-		}*/ 
 
     if len(sc.results) == sc.numSubTasks {
       sc.goPy(co, "sum", sc.results, 2)
@@ -89,7 +66,13 @@ func (sc *TestCoord) TaskDone(co *Coordinator,
 	} else if v == 2 {
     fmt.Printf("Result from %d is %d\n", TID, result)
     co.Finish([]TaskID{TID})
+    sc.result = result
   }
+}
+
+// Returns 0 if not finished, > 0 when done
+func (sc *TestCoord) Result() int {
+  return sc.result
 }
 
 func MakeTestCoord() *TestCoord {

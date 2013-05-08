@@ -189,9 +189,9 @@ func (c *Client) runTask(task *Task) {
   fmt.Fprintf(conn, data)
 
   // Special kill-task handling
-  if task.id == -1 { 
+  if task.id == -1 {
     conn.Close()
-    return 
+    return
   }
 
   // Waiting for result
