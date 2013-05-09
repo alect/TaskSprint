@@ -23,6 +23,7 @@ type Options struct {
   servers []string
   socket string
   program string
+	socktype string
 }
 
 type NodeStatus int
@@ -59,6 +60,7 @@ type Client struct {
   id coordinator.ClientID
   l net.Listener
   clerk *coordinator.Clerk
+	socktype string
   currentView coordinator.View
   options *Options
   nodes []*Node
@@ -208,7 +210,7 @@ tid coordinator.TaskID, key string) (interface{}, bool) {
     ok = true
   } else {
     srv := c.currentView.ClientInfo[cid]
-    ok = call(srv, "Client.GetData", args, &reply)
+    ok = call(srv, "Client.GetData", args, &reply, c.socktype)
   }
 
   return reply.Data, ok && reply.Data != nil
@@ -327,7 +329,7 @@ func (c *Client) startServer(socket string) {
   rpcs.Register(c)
 
   os.Remove(socket) // For now...
-  l, e := net.Listen("unix", socket);
+  l, e := net.Listen(c.socktype, socket);
   if e != nil {
     log.Fatal("listen error: ", e);
   }
@@ -370,6 +372,7 @@ func (c *Client) initNodes() int {
 
 func InitFlags() *Options {
   options := new(Options)
+	options.socktype = "tcp"
   servers := flag.String("servers", "", "comma-seperated list of servers")
   socket := flag.String("socket", "", "name of the client-coord socket")
   program := flag.String("program", "", "path to the dev client executable")
@@ -389,8 +392,9 @@ func InitFlags() *Options {
 func Init(o *Options) *Client {
   c := new(Client)
   c.options = o
+	c.socktype = o.socktype
   c.id = coordinator.ClientID(nrand())
-  c.clerk = coordinator.MakeClerk(o.servers, o.socket, c.initNodes(), c.id)
+  c.clerk = coordinator.MakeClerk(o.servers, o.socket, c.initNodes(), c.id, o.socktype)
   c.tasks = make(map[coordinator.TaskID]*Task)
   c.currentView.ViewNum = -1
   c.dead = false
@@ -455,8 +459,8 @@ func (c *Client) clearNodeSockets() {
 
 // RPC call function 
 func call(srv string, rpcname string, args interface{},
-reply interface{}) bool {
-  c, errx := rpc.Dial("unix", srv)
+	reply interface{}, socktype string) bool {
+  c, errx := rpc.Dial(socktype, srv)
   if errx != nil {
     return false
   }

@@ -48,6 +48,9 @@ type Paxos struct {
 	maxDone int 
 	// The max dones from each of our peers 
 	dones []int
+
+	// The socket type for rpcs
+	socktype string
 }
 
 type PaxosInstance struct { 
@@ -117,8 +120,8 @@ type DecideReply struct {
 // please use call() to send all RPCs, in client.go and server.go.
 // please do not change this function.
 //
-func call(srv string, name string, args interface{}, reply interface{}) bool {
-  c, err := rpc.Dial("unix", srv)
+func call(srv string, name string, args interface{}, reply interface{}, socktype string) bool {
+  c, err := rpc.Dial(socktype, srv)
   if err != nil {
     err1 := err.(*net.OpError)
     if err1.Err != syscall.ENOENT && err1.Err != syscall.ECONNREFUSED {
@@ -249,7 +252,7 @@ func (px *Paxos) Propose(seq int, v interface{}) {
 		//fmt.Printf("Server %v sending prepares for %v\n", px.me, n); 
 		for i := 0; i < len(px.peers) && !px.dead; i++ { 
 			var prepareReply PrepareReply
-			ok := call(px.peers[i], "Paxos.Prepare", prepareArgs, &prepareReply)
+			ok := call(px.peers[i], "Paxos.Prepare", prepareArgs, &prepareReply, px.socktype)
 			if ok {
 				if prepareReply.OK { 
 					numPrepared++
@@ -271,7 +274,7 @@ func (px *Paxos) Propose(seq int, v interface{}) {
 			acceptArgs = AcceptArgs{ seq, n, v, px.maxDone, px.me } 
 			for i := 0; i < len(px.peers) && !px.dead; i++ { 
 				var acceptReply AcceptReply
-				ok := call(px.peers[i], "Paxos.Accept", acceptArgs, &acceptReply)
+				ok := call(px.peers[i], "Paxos.Accept", acceptArgs, &acceptReply, px.socktype)
 				if ok { 
 					if acceptReply.OK { 
 						numAccepted++ 
@@ -286,7 +289,7 @@ func (px *Paxos) Propose(seq int, v interface{}) {
 				decidedArgs := DecideArgs { seq, n, v, px.maxDone, px.me }
 				var decidedReply DecideReply
 				for i := 0; i < len(px.peers) && !px.dead; i++ { 
-					call(px.peers[i], "Paxos.Decide", decidedArgs, &decidedReply)
+					call(px.peers[i], "Paxos.Decide", decidedArgs, &decidedReply, px.socktype)
 				}
 				px.Decide(&decidedArgs, &decidedReply)
 				return
@@ -447,7 +450,7 @@ func (px *Paxos) Kill() {
 // the ports of all the paxos peers (including this one)
 // are in peers[]. this servers port is peers[me].
 //
-func Make(peers []string, me int, rpcs *rpc.Server) *Paxos {
+func Make(peers []string, me int, rpcs *rpc.Server, socktype string) *Paxos {
   px := &Paxos{}
   px.peers = peers
   px.me = me
@@ -455,6 +458,7 @@ func Make(peers []string, me int, rpcs *rpc.Server) *Paxos {
 	px.maxSeq = -1
 	px.maxDone = -1
 	px.dones = make([]int, len(peers))
+	px.socktype = socktype
 	for i := range px.dones { 
 		px.dones[i] = -1
 	} 
@@ -472,7 +476,7 @@ func Make(peers []string, me int, rpcs *rpc.Server) *Paxos {
     // prepare to receive connections from clients.
     // change "unix" to "tcp" to use over a network.
     os.Remove(peers[me]) // only needed for "unix"
-    l, e := net.Listen("unix", peers[me]);
+    l, e := net.Listen(socktype, peers[me]);
     if e != nil {
       log.Fatal("listen error: ", e);
     }
