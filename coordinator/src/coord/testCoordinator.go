@@ -39,7 +39,8 @@ func (sc *TestCoord) goPy(co *Coordinator, name string, args []int, taskType int
   params.FuncName = name
   params.DoneKeys = []string{"result"}
   params.BaseObject = args
-  sc.tasks[co.StartTask(params)] = taskType
+  tid := co.StartTask(params)
+  sc.tasks[tid] = taskType
 }
 
 func (sc *TestCoord) TaskDone(co *Coordinator,
@@ -51,7 +52,6 @@ func (sc *TestCoord) TaskDone(co *Coordinator,
   }
 
   result := int(DoneValues["result"].(float64))
-  fmt.Printf("Received: %d\n", result)
   if v == 1 {
     sc.results = append(sc.results, result)
 
@@ -59,6 +59,7 @@ func (sc *TestCoord) TaskDone(co *Coordinator,
       sc.goPy(co, "sum", sc.results, 2)
     }
 	} else if v == 2 {
+    fmt.Printf("Received: %d\n", result)
     co.Finish([]TaskID{TID})
     sc.result = result
   }

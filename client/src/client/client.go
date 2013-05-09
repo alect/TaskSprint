@@ -187,7 +187,7 @@ func (c *Client) killTasks(tasks []coordinator.TaskID) {
 
 func (c *Client) scheduleTasks(tasks []coordinator.TaskID,
 args map[coordinator.TaskID]coordinator.TaskParams) {
-  fmt.Printf("Scheduling %v\n", tasks)
+  /* fmt.Printf("Scheduling %v\n", tasks) */
   t := 0
   for i := 0; i < len(c.nodes) && t < len(tasks); i++ {
     if c.nodes[i].status == Free {
@@ -316,11 +316,13 @@ func (c *Client) markFinished(task *Task, result map[string]interface{}) {
   task.status = Finished
 }
 
-func (c *Client) tick() {
+func (c *Client) tick() bool {
   view := c.clerk.Query()
   if c.currentView.ViewNum < view.ViewNum {
     c.processView(&view)
+    return true
   }
+  return false
 }
 
 func (c *Client) startServer(socket string) {
@@ -406,8 +408,9 @@ func Init(o *Options) *Client {
 func (c *Client) Start() {
   go func() {
     for !c.dead {
-      c.tick()
-      time.Sleep(250 * time.Millisecond)
+      if !c.tick() { // Sleep if nothing new
+        time.Sleep(100 * time.Millisecond)
+      }
     }
   }()
 
