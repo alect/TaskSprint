@@ -22,8 +22,8 @@ import "encoding/json"
 type Options struct {
   servers []string
   socket string
-  program string
 	socktype string
+  program string
 }
 
 type NodeStatus int
@@ -60,7 +60,6 @@ type Client struct {
   id coordinator.ClientID
   l net.Listener
   clerk *coordinator.Clerk
-	socktype string
   currentView coordinator.View
   options *Options
   nodes []*Node
@@ -188,7 +187,7 @@ func (c *Client) killTasks(tasks []coordinator.TaskID) {
 
 func (c *Client) scheduleTasks(tasks []coordinator.TaskID,
 args map[coordinator.TaskID]coordinator.TaskParams) {
-  /* fmt.Printf("Scheduling %v\n", tasks) */
+  fmt.Printf("Scheduling %v\n", tasks)
   t := 0
   for i := 0; i < len(c.nodes) && t < len(tasks); i++ {
     if c.nodes[i].status == Free {
@@ -210,7 +209,7 @@ tid coordinator.TaskID, key string) (interface{}, bool) {
     ok = true
   } else {
     srv := c.currentView.ClientInfo[cid]
-    ok = call(srv, "Client.GetData", args, &reply, c.socktype)
+    ok = c.call(srv, "Client.GetData", args, &reply)
   }
 
   return reply.Data, ok && reply.Data != nil
@@ -328,8 +327,8 @@ func (c *Client) startServer(socket string) {
   rpcs := rpc.NewServer()
   rpcs.Register(c)
 
-  os.Remove(socket) // For now...
-  l, e := net.Listen(c.socktype, socket);
+  if (c.options.socktype == "unix") { os.Remove(socket) }
+  l, e := net.Listen(c.options.socktype, socket);
   if e != nil {
     log.Fatal("listen error: ", e);
   }
@@ -372,19 +371,20 @@ func (c *Client) initNodes() int {
 
 func InitFlags() *Options {
   options := new(Options)
-	options.socktype = "tcp"
   servers := flag.String("servers", "", "comma-seperated list of servers")
   socket := flag.String("socket", "", "name of the client-coord socket")
   program := flag.String("program", "", "path to the dev client executable")
+  network := flag.String("network", "", "network type: unix, tcp, udp, etc.")
 
   flag.Parse()
 
   if *servers == "" || *socket == "" || *program == "" {
     log.Fatal("usage: -servers ip:port[,ip:port...] -socket path -program path")
-  } 
+  }
 
   options.servers = strings.Split(*servers, ",")
   options.socket = *socket
+	options.socktype = *network
   options.program = *program
   return options
 }
@@ -392,12 +392,12 @@ func InitFlags() *Options {
 func Init(o *Options) *Client {
   c := new(Client)
   c.options = o
-	c.socktype = o.socktype
   c.id = coordinator.ClientID(nrand())
-  c.clerk = coordinator.MakeClerk(o.servers, o.socket, c.initNodes(), c.id, o.socktype)
   c.tasks = make(map[coordinator.TaskID]*Task)
   c.currentView.ViewNum = -1
   c.dead = false
+  c.clerk = coordinator.MakeClerk(o.servers, o.socket,
+    c.initNodes(), c.id, o.socktype)
 
   return c
 }
@@ -458,15 +458,15 @@ func (c *Client) clearNodeSockets() {
 }
 
 // RPC call function 
-func call(srv string, rpcname string, args interface{},
-	reply interface{}, socktype string) bool {
-  c, errx := rpc.Dial(socktype, srv)
+func (c *Client) call(srv string, rpcname string, args interface{},
+	reply interface{}) bool {
+  conn, errx := rpc.Dial(c.options.socktype, srv)
   if errx != nil {
     return false
   }
-  defer c.Close()
+  defer conn.Close()
 
-  err := c.Call(rpcname, args, reply)
+  err := conn.Call(rpcname, args, reply)
   if err == nil {
     return true
   }

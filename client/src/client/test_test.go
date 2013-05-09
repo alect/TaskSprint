@@ -8,7 +8,10 @@ import "strconv"
 import "os"
 import "fmt"
 
-func port(tag string, host int) string {
+func port(tag string, host int, st string) string {
+  if st != "unix" {
+    return "localhost:0"
+  }
   s := "/tmp/824-"
   s += strconv.Itoa(os.Getuid()) + "/"
   os.Mkdir(s, 0777)
@@ -113,8 +116,8 @@ sca []*coordinator.PreReqCoord, delay int, expected int, fail bool) {
   }
 }
 
-func CreateCoords(nservers, numTaskReplicas int,
-seed int64) ([]*coordinator.Coordinator, []string, []*coordinator.TestCoord) {
+func CreateCoords(nservers, numTaskReplicas int, seed int64,
+st string) ([]*coordinator.Coordinator, []string, []*coordinator.TestCoord) {
   runtime.GOMAXPROCS(8)
 
   var coa []*coordinator.Coordinator = 
@@ -127,17 +130,18 @@ seed int64) ([]*coordinator.Coordinator, []string, []*coordinator.TestCoord) {
     sca[i] = coordinator.MakeTestCoord()
   }
   for i := 0; i < nservers; i++ {
-    kvh[i] = port("basic", i)
+    kvh[i] = port("basic", i, st)
   }
   for i := 0; i < nservers; i++ {
-    coa[i] = coordinator.StartServer(kvh, i, sca[i], numTaskReplicas, seed)
+    coa[i] = coordinator.StartServer(kvh, i, sca[i], numTaskReplicas,
+      seed, st)
   }
 
   return coa, kvh, sca
 }
 
-func CreatePreReqCoords(nservers, numTaskReplicas int,
-seed int64) ([]*coordinator.Coordinator, []string, []*coordinator.PreReqCoord) {
+func CreatePreReqCoords(nservers, numTaskReplicas int, seed int64,
+st string) ([]*coordinator.Coordinator, []string, []*coordinator.PreReqCoord) {
   runtime.GOMAXPROCS(8)
 
   var coa []*coordinator.Coordinator = 
@@ -150,17 +154,18 @@ seed int64) ([]*coordinator.Coordinator, []string, []*coordinator.PreReqCoord) {
     sca[i] = coordinator.MakePreReqCoord()
   }
   for i := 0; i < nservers; i++ {
-    kvh[i] = port("basic", i)
+    kvh[i] = port("basic", i, st)
   }
   for i := 0; i < nservers; i++ {
-    coa[i] = coordinator.StartServer(kvh, i, sca[i], numTaskReplicas, seed)
+    coa[i] = coordinator.StartServer(kvh, i, sca[i], numTaskReplicas, seed,
+    "unix")
   }
 
   return coa, kvh, sca
 }
 
-func CreatePythonCoords(nservers, numTaskReplicas int,
-seed int64) ([]*coordinator.Coordinator, []string, []*coordinator.AllCoordinator) {
+func CreatePythonCoords(nservers, numTaskReplicas int, seed int64,
+st string) ([]*coordinator.Coordinator, []string, []*coordinator.AllCoordinator) {
   runtime.GOMAXPROCS(8)
 
   var coa []*coordinator.Coordinator = 
@@ -174,10 +179,11 @@ seed int64) ([]*coordinator.Coordinator, []string, []*coordinator.AllCoordinator
       "./../../../libraries/python/coordinator/testCoordinator.py");
   }
   for i := 0; i < nservers; i++ {
-    kvh[i] = port("basic", i)
+    kvh[i] = port("basic", i, st)
   }
   for i := 0; i < nservers; i++ {
-    coa[i] = coordinator.StartServer(kvh, i, sca[i], numTaskReplicas, seed)
+    coa[i] = coordinator.StartServer(kvh, i, sca[i], numTaskReplicas,
+    seed, "unix")
   }
 
   return coa, kvh, sca
@@ -226,12 +232,13 @@ sca []*coordinator.AllCoordinator, delay int, expected int, fail bool) {
   }
 }
 
-func CreateClients(numClient int, kvh []string) []*Client {
+func CreateClients(numClient int, kvh []string, st string) []*Client {
   clients := make([]*Client, numClient)
   for i := 0; i < numClient; i++ {
     options := &Options{
       kvh,
-      port("clientsocket", i),
+      port("clientsocket", i, st),
+      st,
       "./../../../libraries/python/client/testNode.py",
     }
 
@@ -246,8 +253,8 @@ func CreateClients(numClient int, kvh []string) []*Client {
 
 /*   // Set up coordinators and clients */
 /*   numTaskReplicas, nservers, numClient := 1, 3, 1; */
-/*   coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0) */
-/*   clients := CreateClients(numClient, kvh) */
+/*   coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "unix") */
+/*   clients := CreateClients(numClient, kvh, "unix") */
 
 /*   // Run the computation, timeout in 15 seconds */
 /*   Run(clients, nservers, sca, 15, true) */
@@ -255,6 +262,21 @@ func CreateClients(numClient int, kvh []string) []*Client {
 /*   // Cleanup the coordinators */
 /*   cleanup(coa) */
 /* } */
+
+func TestSimpleTCP(t *testing.T) {
+  fmt.Printf("Test: Single Client: TCP\n")
+
+  // Set up coordinators and clients
+  numTaskReplicas, nservers, numClient := 1, 3, 1;
+  coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "tcp")
+  clients := CreateClients(numClient, kvh, "tcp")
+
+  // Run the computation, timeout in 15 seconds
+  Run(clients, nservers, sca, 30, true)
+
+  // Cleanup the coordinators
+  cleanup(coa)
+}
 
 /* func TestMultipleSimple(t *testing.T) { */
 /* 	fmt.Printf("Test: Multiple Clients\n") */
@@ -518,17 +540,17 @@ func CreateClients(numClient int, kvh []string) []*Client {
 /*   cleanup(coa) */
 /* } */
 
-func TestSimplyPython(t *testing.T) {
-	fmt.Printf("Test: Single Client With Python Coordinator\n")
+/* /1* func TestSimplyPython(t *testing.T) { *1/ */
+/* /1* 	fmt.Printf("Test: Single Client With Python Coordinator\n") *1/ */
 
-  // Set up coordinators and clients
-  numTaskReplicas, nservers, numClient := 1, 1, 1;
-  coa, kvh, sca := CreatePythonCoords(nservers, numTaskReplicas, 0)
-  clients := CreateClients(numClient, kvh)
+/* /1*   // Set up coordinators and clients *1/ */
+/* /1*   numTaskReplicas, nservers, numClient := 1, 1, 1; *1/ */
+/* /1*   coa, kvh, sca := CreatePythonCoords(nservers, numTaskReplicas, 0) *1/ */
+/* /1*   clients := CreateClients(numClient, kvh) *1/ */
 
-  // Run the computation, timeout in 15 seconds
-  RunPython(clients, nservers, sca, 15, true)
+/* /1*   // Run the computation, timeout in 15 seconds *1/ */
+/* /1*   RunPython(clients, nservers, sca, 15, true) *1/ */
 
-  // Cleanup the coordinators
-  cleanup(coa)
-}
+/* /1*   // Cleanup the coordinators *1/ */
+/* /1*   cleanup(coa) *1/ */
+/* /1* } *1/ */
