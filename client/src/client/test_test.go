@@ -269,7 +269,7 @@ func TestSimpleTCP(t *testing.T) {
   fmt.Printf("Test: Single Client: TCP\n")
 
   // Set up coordinators and clients
-  numTaskReplicas, nservers, numClient := 1, 3, 1;
+  numTaskReplicas, nservers, numClient := 1, 1, 1;
   coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "tcp")
   clients := CreateClients(numClient, kvh, "tcp")
 
