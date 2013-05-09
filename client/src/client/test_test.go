@@ -56,7 +56,7 @@ delay int, expected int, fail bool) {
       } else { finished = nservers; break; }
     }
     timeout = time.Now().After(endTime)
-    time.Sleep(750 * time.Millisecond)
+    time.Sleep(500 * time.Millisecond)
   }
 
   if fail {
@@ -108,20 +108,20 @@ func CreateClients(numClient int, kvh []string) []*Client {
   return clients
 }
 
-/*func TestSimple(t *testing.T) {
-	fmt.Printf("Test: Single Client\n")
+/* func TestSimple(t *testing.T) { */
+/* 	fmt.Printf("Test: Single Client\n") */
 
-  // Set up coordinators and clients
-  numTaskReplicas, nservers, numClient := 1, 3, 1;
-  coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0)
-  clients := CreateClients(numClient, kvh)
+/*   // Set up coordinators and clients */
+/*   numTaskReplicas, nservers, numClient := 1, 3, 1; */
+/*   coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0) */
+/*   clients := CreateClients(numClient, kvh) */
 
-  // Run the computation, timeout in 25 seconds
-  Run(clients, nservers, sca, 25, true)
+/*   // Run the computation, timeout in 15 seconds */
+/*   Run(clients, nservers, sca, 20, true) */
 
-  // Cleanup the coordinators
-  cleanup(coa)
-}*/
+/*   // Cleanup the coordinators */
+/*   cleanup(coa) */
+/* } */
 
 func TestMultipleSimple(t *testing.T) {
 	fmt.Printf("Test: Multiple Clients\n")

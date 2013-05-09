@@ -107,8 +107,12 @@ func (c *Client) processView(view *coordinator.View) {
 
   c.currentView = *view;
 
-  /* myTasks := c.ExtractTasksNew(view) */
+  myTasksNew := c.ExtractTasksNew(view)
   myTasks := c.ExtractTasks(view)
+
+  fmt.Printf("New: %v\n", myTasksNew)
+  fmt.Printf("Old: %v\n\n", myTasks)
+
   newTasks, killedTasks := c.SplitTasks(myTasks)
   c.killTasks(killedTasks)
   c.scheduleTasks(newTasks, view.TaskParams)
