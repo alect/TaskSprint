@@ -68,6 +68,7 @@ type Client struct {
 
 type GetDataArgs struct {
 	Key string
+  TaskId coordinator.TaskID
 }
 
 type GetDataReply struct {
@@ -75,6 +76,8 @@ type GetDataReply struct {
 }
 
 func (c *Client) GetData(args *GetDataArgs, reply *GetDataReply) error {
+  id, key := args.TaskId, args.Key
+  reply.Data = c.tasks[id].data[key]
   return nil
 }
 
@@ -102,19 +105,13 @@ func (c *Client) processView(view *coordinator.View) {
   c.viewMu.Lock()
   defer c.viewMu.Unlock()
 
-  /* myTasks := c.ExtractTasks(view) */
-  myTasksOld := c.ExtractTasks(view)
-  myTasks := c.ExtractTasksNew(view)
+  c.currentView = *view;
 
-  fmt.Printf("New: %v\n", myTasks)
-  /* fmt.Printf("New: %v\n\n", myTasksNew) */
-  fmt.Printf("Old: %v\n\n", myTasksOld)
-
+  /* myTasks := c.ExtractTasksNew(view) */
+  myTasks := c.ExtractTasks(view)
   newTasks, killedTasks := c.SplitTasks(myTasks)
   c.killTasks(killedTasks)
   c.scheduleTasks(newTasks, view.TaskParams)
-
-  c.currentView = *view;
 }
 
 func (c *Client) ExtractTasks(view *coordinator.View) []coordinator.TaskID {
@@ -131,9 +128,6 @@ func (c *Client) ExtractTasksNew(view *coordinator.View) []coordinator.TaskID {
   tasks := make([]coordinator.TaskID, 0)
   for tid, v := range view.Tasks {
     for _, cid := range v.PendingClients {
-      if c.id == cid { tasks = append(tasks, tid) }
-    }
-    for _, cid := range v.FinishedClients {
       if c.id == cid { tasks = append(tasks, tid) }
     }
   }
@@ -200,15 +194,51 @@ args map[coordinator.TaskID]coordinator.TaskParams) {
   }
 }
 
+func (c *Client) FetchData(cid coordinator.ClientID,
+tid coordinator.TaskID, key string) (interface{}, bool) {
+  args := &GetDataArgs{key, tid}
+  srv := c.currentView.ClientInfo[cid]
+
+	var reply GetDataReply
+  ok := call(srv, "Client.GetData", args, reply)
+
+  return reply.Data, ok
+}
+
+func (c *Client) fetchParams(params *coordinator.TaskParams) string {
+  if len(params.PreReqTasks) == 0 {
+    return fmt.Sprintf("[\"%s\", %s]", params.FuncName, params.BaseObject)
+  }
+
+  fetched := make([]bool, len(params.PreReqTasks))
+  data := make([]interface{}, len(params.PreReqTasks))
+  for t, done := range fetched {
+    if done { continue }
+    tid := params.PreReqTasks[t]
+    finishedClients := c.currentView.Tasks[tid].FinishedClients
+    for _, cid := range finishedClients {
+      fmt.Printf("Trying %d", cid)
+      datum, ok := c.FetchData(cid, tid, params.PreReqKey[t])
+      if !ok { continue }
+      fetched[t] = true
+      data[t] = datum
+      fmt.Printf("Got %v\n", datum)
+    }
+  }
+
+  return fmt.Sprintf("[\"%s\", %s]", params.FuncName, params.BaseObject)
+}
+
 func (c *Client) runTask(task *Task) {
-  node, params := task.node, task.params
   /* fmt.Printf("Running task\t %d on\t %s\n", task.id, node.socket) */
-  /* fmt.Printf("params: %v\n", params) */
+  node, params := task.node, task.params
+  data := c.fetchParams(&params)
 
   // Trying to connect to node
   node.status, task.status = Busy, Started
   conn, err := net.Dial("unix", node.socket)
   for tries := 0; tries < 20 && err != nil; tries++ {
+    if c.dead { return }
     time.Sleep(250 * time.Millisecond)
     conn, err = net.Dial("unix", node.socket)
   }
@@ -217,7 +247,6 @@ func (c *Client) runTask(task *Task) {
   if err != nil { log.Fatal("Node is dead.", err) }
 
   // Sending data 
-  data := fmt.Sprintf("[\"%s\", %s]", params.FuncName, params.BaseObject)
   fmt.Fprintf(conn, data)
 
   // Special kill-task handling
@@ -244,6 +273,10 @@ func (c *Client) markFinished(task *Task, result map[string]interface{}) {
   for _, k := range task.params.DoneKeys {
     if v, p := result[k]; p { outResult[k] = v }
   }
+
+  // Need to avoid a very slim, but possible, race
+  c.viewMu.Lock()
+  defer c.viewMu.Unlock()
 
   c.clerk.Done(task.id, outResult)
 
@@ -360,12 +393,11 @@ func (c *Client) killNode(node *Node) {
 }
 
 func (c *Client) Kill() {
-  c.dead = true
-
   for _, node := range c.nodes {
     c.killNode(node)
   }
 
+  c.dead = true
   c.clearNodeSockets();
 }
 
@@ -393,4 +425,20 @@ func (c *Client) clearNodeSockets() {
   s := "/tmp/tsclient-"
   s += strconv.FormatInt(int64(c.id), 10) + "/"
   os.RemoveAll(s)
+}
+
+// RPC call function 
+func call(srv string, rpcname string, args interface{},
+reply interface{}) bool {
+  c, errx := rpc.Dial("unix", srv)
+  if errx != nil {
+    return false
+  }
+  defer c.Close()
+
+  err := c.Call(rpcname, args, reply)
+  if err == nil {
+    return true
+  }
+  return false
 }
