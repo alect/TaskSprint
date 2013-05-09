@@ -117,7 +117,7 @@ func TestSimple(t *testing.T) {
   clients := CreateClients(numClient, kvh)
 
   // Run the computation, timeout in 10 seconds
-  Run(clients, nservers, sca, 25, true)
+  Run(clients, nservers, sca, 30, true)
 
   // Cleanup the coordinators
   cleanup(coa)

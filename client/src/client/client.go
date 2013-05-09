@@ -102,10 +102,17 @@ func (c *Client) processView(view *coordinator.View) {
   c.viewMu.Lock()
   defer c.viewMu.Unlock()
 
-  myTasks := c.ExtractTasks(view)
+  /* myTasks := c.ExtractTasks(view) */
+  myTasksOld := c.ExtractTasks(view)
+  myTasks := c.ExtractTasksNew(view)
+
+  fmt.Printf("New: %v\n", myTasks)
+  /* fmt.Printf("New: %v\n\n", myTasksNew) */
+  fmt.Printf("Old: %v\n\n", myTasksOld)
+
   newTasks, killedTasks := c.SplitTasks(myTasks)
   c.killTasks(killedTasks)
-  c.scheduleTasks(newTasks, view)
+  c.scheduleTasks(newTasks, view.TaskParams)
 
   c.currentView = *view;
 }
@@ -120,15 +127,18 @@ func (c *Client) ExtractTasks(view *coordinator.View) []coordinator.TaskID {
   return tasks
 }
 
-/* func (c *Client) ExtractTasks(view *coordinator.View) []coordinator.TaskID { */
-/*   tasks := make([]coordinator.TaskID, 0) */
-/*   for tid, v := range view.Tasks { */
-/*     for _, cid := range v.PendingClients { */
-/*       if c.id == cid { tasks = append(tasks, tid) } */
-/*     } */
-/*   } */
-/*   return tasks */
-/* } */
+func (c *Client) ExtractTasksNew(view *coordinator.View) []coordinator.TaskID {
+  tasks := make([]coordinator.TaskID, 0)
+  for tid, v := range view.Tasks {
+    for _, cid := range v.PendingClients {
+      if c.id == cid { tasks = append(tasks, tid) }
+    }
+    for _, cid := range v.FinishedClients {
+      if c.id == cid { tasks = append(tasks, tid) }
+    }
+  }
+  return tasks
+}
 
 func (c *Client) SplitTasks(
 tasks []coordinator.TaskID) ([]coordinator.TaskID, []coordinator.TaskID) {
@@ -145,7 +155,12 @@ tasks []coordinator.TaskID) ([]coordinator.TaskID, []coordinator.TaskID) {
 
   killedTasks := make([]coordinator.TaskID, 0)
   for k, v := range currentTasks {
-    if v == 1 { killedTasks = append(killedTasks, k) }
+    if v == 1 {
+      task, present := c.tasks[k]
+      if !present { log.Fatal("Cannot kill nonexistant task.") }
+      if task.status == Killed || task.status == Finished { continue }
+      killedTasks = append(killedTasks, k)
+    }
   }
 
   return newTasks, killedTasks
@@ -153,7 +168,9 @@ tasks []coordinator.TaskID) ([]coordinator.TaskID, []coordinator.TaskID) {
 
 func (c *Client) killTasks(tasks []coordinator.TaskID) {
   // Need to lock task array
-  /* fmt.Printf("Killing %v\n", tasks) */
+  if len(tasks) > 0 {
+    fmt.Printf("Killing %v\n", tasks)
+  }
   for _, tid := range tasks {
     task := c.tasks[tid]
     node := task.node
@@ -169,14 +186,13 @@ func (c *Client) killTasks(tasks []coordinator.TaskID) {
 }
 
 func (c *Client) scheduleTasks(tasks []coordinator.TaskID,
-view *coordinator.View) {
+args map[coordinator.TaskID]coordinator.TaskParams) {
   // Need to lock task array
   /* fmt.Printf("Scheduling %v\n", tasks) */
   t := 0
   for i := 0; i < len(c.nodes) && t < len(tasks); i++ {
     if c.nodes[i].status == Free {
-      params := view.Tasks[tasks[t]].Params
-      newTask := &Task{tasks[t], c.nodes[i], Pending, params, nil}
+      newTask := &Task{tasks[t], c.nodes[i], Pending, args[tasks[t]], nil}
       c.tasks[tasks[t]] = newTask
       go c.runTask(newTask)
       t++
