@@ -32,7 +32,7 @@ func main() {
 	} else {
 		log.Fatal("dc parameter must be one of the following: test, mapreduce")
 	}
-	co := coordinator.StartServer(serverNames, *meIndex, dc, *numTaskReplicas, *seed, "tcp")
+	co := coordinator.MakeServer(serverNames, *meIndex, dc, *numTaskReplicas, *seed, "tcp")
 	// Doesn't return until coordinator is dead. 
 	co.StartTicks()
 }

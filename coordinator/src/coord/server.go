@@ -442,8 +442,14 @@ func (co *Coordinator) StartTicks() {
 	}
 }
 
-
 func StartServer(servers []string, me int, dc DeveloperCoord, numTaskReplicas int, seed int64, socktype string) *Coordinator { 
+	co := MakeServer(servers, me, dc, numTaskReplicas, seed, socktype)
+	go co.StartTicks()
+	return co
+}
+
+
+func MakeServer(servers []string, me int, dc DeveloperCoord, numTaskReplicas int, seed int64, socktype string) *Coordinator { 
 	gob.Register(Op{})
 
 	co := new(Coordinator)
@@ -510,10 +516,6 @@ func StartServer(servers []string, me int, dc DeveloperCoord, numTaskReplicas in
 			} 
 		} 
 	}() 
-
-	if socktype != "tcp" {
-		go co.StartTicks()
-	}
 
 	return co
 } 
