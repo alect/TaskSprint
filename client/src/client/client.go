@@ -186,7 +186,6 @@ func (c *Client) killTasks(tasks []coordinator.TaskID) {
 
 func (c *Client) scheduleTasks(tasks []coordinator.TaskID,
 args map[coordinator.TaskID]coordinator.TaskParams) {
-  // Need to lock task array
   /* fmt.Printf("Scheduling %v\n", tasks) */
   t := 0
   for i := 0; i < len(c.nodes) && t < len(tasks); i++ {
@@ -202,36 +201,58 @@ args map[coordinator.TaskID]coordinator.TaskParams) {
 func (c *Client) FetchData(cid coordinator.ClientID,
 tid coordinator.TaskID, key string) (interface{}, bool) {
   args := &GetDataArgs{key, tid}
-  srv := c.currentView.ClientInfo[cid]
-
 	var reply GetDataReply
-  ok := call(srv, "Client.GetData", args, reply)
+  var ok bool
+  if cid == c.id {
+    c.GetData(args, &reply)
+    ok = true
+  } else {
+    srv := c.currentView.ClientInfo[cid]
+    ok = call(srv, "Client.GetData", args, &reply)
+  }
 
-  return reply.Data, ok
+  return reply.Data, ok && reply.Data != nil
+}
+
+func (c *Client) getJson(task string, data interface{}) string {
+  jsonString := ""
+  if data != nil {
+    byteArray, err := json.Marshal(data)
+    if err != nil { log.Fatal("Failed to marshal data.") }
+    jsonString = string(byteArray)
+  }
+
+  return fmt.Sprintf("[\"%s\", %s]", task, jsonString)
 }
 
 func (c *Client) fetchParams(params *coordinator.TaskParams) string {
   if len(params.PreReqTasks) == 0 {
-    return fmt.Sprintf("[\"%s\", %s]", params.FuncName, params.BaseObject)
+    return c.getJson(params.FuncName, params.BaseObject)
   }
 
-  fetched := make([]bool, len(params.PreReqTasks))
-  data := make([]interface{}, len(params.PreReqTasks))
-  for t, done := range fetched {
-    if done { continue }
-    tid := params.PreReqTasks[t]
-    finishedClients := c.currentView.Tasks[tid].FinishedClients
-    for _, cid := range finishedClients {
-      fmt.Printf("Trying %d", cid)
-      datum, ok := c.FetchData(cid, tid, params.PreReqKey[t])
-      if !ok { continue }
-      fetched[t] = true
-      data[t] = datum
-      fmt.Printf("Got %v\n", datum)
+  prereqs, complete := len(params.PreReqTasks), 0
+  fetched := make([]bool, prereqs)
+  data := make([]interface{}, prereqs)
+  for complete < prereqs && !c.dead {
+    for t, done := range fetched {
+      if done { continue }
+      if c.dead { break }
+      tid := params.PreReqTasks[t]
+      finishedClients := c.currentView.Tasks[tid].FinishedClients
+      for _, cid := range finishedClients {
+        /* fmt.Printf("Trying %d\n", cid) */
+        datum, ok := c.FetchData(cid, tid, params.PreReqKey[t])
+        if !ok { continue }
+        fetched[t], data[t] = true, datum
+        complete++
+        /* fmt.Printf("Got %v\n", datum) */
+      }
     }
+    // Pause before retrying
+    time.Sleep(250 * time.Millisecond)
   }
 
-  return fmt.Sprintf("[\"%s\", %s]", params.FuncName, params.BaseObject)
+  return c.getJson(params.FuncName, data)
 }
 
 func (c *Client) runTask(task *Task) {

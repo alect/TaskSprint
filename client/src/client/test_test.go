@@ -70,6 +70,50 @@ delay int, expected int, fail bool) {
   }
 }
 
+func RunPreReq(clients []*Client, nservers int, sca []*coordinator.PreReqCoord,
+delay int, fail bool) {
+  for _, c := range clients {
+    go c.Start()
+  }
+
+  PollPreReq(clients, nservers, sca, delay, 79800, fail)
+
+
+  for _, c := range clients {
+    c.Kill()
+  }
+
+  // Make sure they're dead and sockets are freed
+  time.Sleep(5 * time.Second)
+}
+
+func PollPreReq(clients []*Client, nservers int,
+sca []*coordinator.PreReqCoord, delay int, expected int, fail bool) {
+  endTime := time.Now().Add(time.Duration(delay) * time.Second)
+  finished, timeout, result := 0, false, 0
+  for finished < nservers && !timeout {
+    finished = 0
+    for _, c := range sca {
+      result = c.Result()
+      if result == 0 { continue }
+      if result == expected { finished++
+      } else { finished = nservers; break; }
+    }
+    timeout = time.Now().After(endTime)
+    time.Sleep(500 * time.Millisecond)
+  }
+
+  if fail {
+    if !timeout && finished == nservers && result == expected {
+      fmt.Printf("  ... Passed\n")
+    } else if timeout {
+      fmt.Printf("FAIL: {timeout} \n", result)
+    } else {
+      fmt.Printf("FAIL: {expected %d, got %d}\n", expected, result)
+    }
+  }
+}
+
 func CreateCoords(nservers, numTaskReplicas int,
 seed int64) ([]*coordinator.Coordinator, []string, []*coordinator.TestCoord) {
   runtime.GOMAXPROCS(8)
@@ -82,6 +126,29 @@ seed int64) ([]*coordinator.Coordinator, []string, []*coordinator.TestCoord) {
 
   for i := 0; i < nservers; i++ {
     sca[i] = coordinator.MakeTestCoord()
+  }
+  for i := 0; i < nservers; i++ {
+    kvh[i] = port("basic", i)
+  }
+  for i := 0; i < nservers; i++ {
+    coa[i] = coordinator.StartServer(kvh, i, sca[i], numTaskReplicas, seed)
+  }
+
+  return coa, kvh, sca
+}
+
+func CreatePreReqCoords(nservers, numTaskReplicas int,
+seed int64) ([]*coordinator.Coordinator, []string, []*coordinator.PreReqCoord) {
+  runtime.GOMAXPROCS(8)
+
+  var coa []*coordinator.Coordinator = 
+  make([]*coordinator.Coordinator, nservers)
+  var kvh []string = make([]string, nservers)
+  var sca []*coordinator.PreReqCoord =
+  make([]*coordinator.PreReqCoord, nservers)
+
+  for i := 0; i < nservers; i++ {
+    sca[i] = coordinator.MakePreReqCoord()
   }
   for i := 0; i < nservers; i++ {
     kvh[i] = port("basic", i)
@@ -117,7 +184,7 @@ func TestSimple(t *testing.T) {
   clients := CreateClients(numClient, kvh)
 
   // Run the computation, timeout in 15 seconds
-  Run(clients, nservers, sca, 30, true)
+  Run(clients, nservers, sca, 15, true)
 
   // Cleanup the coordinators
   cleanup(coa)
@@ -243,5 +310,35 @@ func TestMultipleOOSQuitThenJoin(t *testing.T) {
     time.Sleep(4 * time.Second)
   }
 
+  cleanup(coa)
+}
+
+func TestSimpleLocalPreReq(t *testing.T) {
+	fmt.Printf("Test: Single Client With Pre Reqs\n")
+
+  // Set up coordinators and clients
+  numTaskReplicas, nservers, numClient := 1, 3, 1;
+  coa, kvh, sca := CreatePreReqCoords(nservers, numTaskReplicas, 0)
+  clients := CreateClients(numClient, kvh)
+
+  // Run the computation, timeout in 15 seconds
+  RunPreReq(clients, nservers, sca, 15, true)
+
+  // Cleanup the coordinators
+  cleanup(coa)
+}
+
+func TestSimpleRemotePreReq(t *testing.T) {
+	fmt.Printf("Test: Multiple Clients With Pre Reqs\n")
+
+  // Set up coordinators and clients
+  numTaskReplicas, nservers, numClient := 1, 3, 3;
+  coa, kvh, sca := CreatePreReqCoords(nservers, numTaskReplicas, 0)
+  clients := CreateClients(numClient, kvh)
+
+  // Run the computation, timeout in 15 seconds
+  RunPreReq(clients, nservers, sca, 15, true)
+
+  // Cleanup the coordinators
   cleanup(coa)
 }
