@@ -1,4 +1,7 @@
-import sys, os, socket, inspect, jsonify
+import sys, os, socket, inspect
+
+sys.path.insert(1, os.path.join(sys.path[0], '..'))
+import jsonify
 
 class TaskSprintNode:
   def __init__(self):

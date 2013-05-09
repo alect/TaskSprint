@@ -1,6 +1,8 @@
 #!/usr/bin/python
-import unittest, threading, subprocess, socket, time, jsonify
-import datetime
+import sys, os, unittest, threading, subprocess, socket, time, datetime
+
+sys.path.insert(1, os.path.join(sys.path[0], '..'))
+import jsonify
 
 class Person(object):
   def __init__(self, name, age):
