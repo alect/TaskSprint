@@ -108,7 +108,7 @@ func CreateClients(numClient int, kvh []string) []*Client {
   return clients
 }
 
-func TestSimple(t *testing.T) {
+/*func TestSimple(t *testing.T) {
 	fmt.Printf("Test: Single Client\n")
 
   // Set up coordinators and clients
@@ -121,7 +121,7 @@ func TestSimple(t *testing.T) {
 
   // Cleanup the coordinators
   cleanup(coa)
-}
+}*/
 
 func TestMultipleSimple(t *testing.T) {
 	fmt.Printf("Test: Multiple Clients\n")

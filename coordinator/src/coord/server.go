@@ -139,7 +139,7 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 	defer co.mu.Unlock()
 	
 	if (op.Op == NIL || seq <= co.currentSeq) {
-		return co.currentView
+		return cloneView(co.currentView)
 	}
 	co.currentSeq = seq
 	// First, see if we need to initialize everything 
@@ -207,7 +207,7 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 			co.lastLeaderElection = time.Now()
 		}
 	}
-	return co.currentView
+	return cloneView(co.currentView)
 }
 
 // Function for driving the paxos log forward if we've lagged a bit 
