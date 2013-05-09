@@ -10,13 +10,31 @@
 \maketitle
 
 
-\section {Overview} 
+\section {Introduction} 
 
-\section {Coordinator} 
+MapReduce is a popular distributed computation system because it provides a very simple programming interface for performing large computations over clusters of machines. Unfortunately, MapReduce has some limitations that prevent it from being a good solution for certain problems. These limitations include a vulnerable master server, no support for non-deterministic computations, and a slow synchronization period between the map and reduce phases. 
 
-\section {Client} 
+Solving these limitations is difficult because increasing the generality of MapReduce runs the risk of exposing developers to a more complex and unwieldly programming interface. To solve this problem, we hide as much of the operation of the system from developers as we can without breaking the generality of the system. Developers define tasks by writing simple functions in a programming language of their choice. We also allow developers to define their own coordinators with a simple language-agnostic interface. While requiring developers to provide their own coordinators decreases the usability of the system, we believe most developers will rely on pre-written coordinators that solve common tasks. 
+
+\section {Design}
+
+TaskSprint is split into two major components, a replicated coordinator and a client program. Each of these components communicates with developer-provided functions to perform general purpose tasks. Seeds for random number generators are deterministically passed between machines in the background to support non-deterministic computations such as genetic algorithms. 
+
+\subsection {Coordinator} 
+
+The coordinator is a paxos-replicated event-driven server that handles assignment of tasks to individual clients. The replication ensures that the system continues as long as a majority of the replicas are capable of communicating. Clients query the coordinator for the latest ``View'' of task assignments and notify the coordinator when tasks are completed.
+
+
+\subsection {Client} 
 
 \section {Examples}
 
+We implemented three example programs to show off the generality of our system. These examples include a parallel genetic algorithm, a bitcoin mining program, and MapReduce. 
+
+\subsection {Genetic Algorithm} 
+
+\subsection {Bitcoin Miner}
+
+\subsection {MapReduce} 
 
 \end{document}
