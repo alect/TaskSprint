@@ -7,10 +7,12 @@ import "runtime"
 import "strconv"
 import "os"
 import "fmt"
+import "math/rand"
 
 func port(tag string, host int, st string) string {
   if st != "unix" {
-    return "localhost:0"
+    port := 5000 + int(5000 * rand.Float64())
+    return "localhost:" + strconv.Itoa(port)
   }
   s := "/tmp/824-"
   s += strconv.Itoa(os.Getuid()) + "/"

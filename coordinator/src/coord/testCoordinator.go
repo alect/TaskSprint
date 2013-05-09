@@ -1,6 +1,7 @@
 package coordinator 
 
 import "log"
+import "fmt"
 
 type TestCoord struct {
 	currentTask TaskID
@@ -50,6 +51,7 @@ func (sc *TestCoord) TaskDone(co *Coordinator,
   }
 
   result := int(DoneValues["result"].(float64))
+  fmt.Printf("Received: %d\n", result)
   if v == 1 {
     sc.results = append(sc.results, result)
 
