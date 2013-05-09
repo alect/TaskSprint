@@ -39,8 +39,8 @@ delay int, fail bool) {
     c.Kill()
   }
 
-  // Make sure they're dead
-  time.Sleep(3 * time.Second)
+  // Make sure they're dead and sockets are freed
+  time.Sleep(5 * time.Second)
 }
 
 func Poll(clients []*Client, nservers int, sca []*coordinator.TestCoord, 
@@ -56,7 +56,7 @@ delay int, expected int, fail bool) {
       } else { finished = nservers; break; }
     }
     timeout = time.Now().After(endTime)
-    time.Sleep(750 * time.Millisecond)
+    time.Sleep(500 * time.Millisecond)
   }
 
   if fail {
@@ -116,7 +116,7 @@ func TestSimple(t *testing.T) {
   coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0)
   clients := CreateClients(numClient, kvh)
 
-  // Run the computation, timeout in 10 seconds
+  // Run the computation, timeout in 15 seconds
   Run(clients, nservers, sca, 30, true)
 
   // Cleanup the coordinators
