@@ -2,7 +2,7 @@ package coordinator
 
 import "log"
 
-type TestCoord struct {
+type PreReqCoord struct {
 	currentTask TaskID
 	seed int64
 	tasksFinished int
@@ -12,36 +12,47 @@ type TestCoord struct {
   result int
 }
 
-func (sc *TestCoord) Init(co *Coordinator, seed int64) {
+func (sc *PreReqCoord) Init(co *Coordinator, seed int64) {
+  sc.numSubTasks = 100
   sc.tasks = make(map[TaskID]int)
   sc.results = make([]int, 0)
-  sc.numSubTasks = 400
+  subtasks := make([]TaskID, sc.numSubTasks)
+  keys := make([]string, sc.numSubTasks)
+
 	// Start a task
   for i := 0; i < sc.numSubTasks; i++ {
     s := i * 4
     args := []int{s, s + 1, s + 2, s + 3}
-    sc.goPy(co, "sum", args, 1)
+    subtask := sc.goPy(co, "sum", args, 1, nil, nil)
+    subtasks[i] = subtask
+    keys[i] = "result"
   }
+
+  sc.goPy(co, "sum", nil, 2, subtasks, keys)
 }
 
-func (sc *TestCoord) ClientJoined(co *Coordinator, CID ClientID) {
+func (sc *PreReqCoord) ClientJoined(co *Coordinator, CID ClientID) {
 	// Do nothing for now 
 }
 
-func (sc *TestCoord) ClientDead(co *Coordinator, CID ClientID) {
+func (sc *PreReqCoord) ClientDead(co *Coordinator, CID ClientID) {
 	// Do nothing for now 
 	//fmt.Printf("Client marked dead: %v\n", CID)
 }
 
-func (sc *TestCoord) goPy(co *Coordinator, name string, args []int, taskType int) {
+func (sc *PreReqCoord) goPy(co *Coordinator, name string, args []int, taskType int, prereqTasks []TaskID, prereqKeys []string) TaskID {
   params := TaskParams{}
   params.FuncName = name
   params.DoneKeys = []string{"result"}
+  params.PreReqTasks = prereqTasks
+  params.PreReqKey = prereqKeys
   params.BaseObject = args
-  sc.tasks[co.StartTask(params)] = taskType
+  task := co.StartTask(params)
+  sc.tasks[task] = taskType
+  return task
 }
 
-func (sc *TestCoord) TaskDone(co *Coordinator,
+func (sc *PreReqCoord) TaskDone(co *Coordinator,
   TID TaskID, DoneValues map[string]interface{}) {
 	// Handle tasks with prerequisites here 
   v, p := sc.tasks[TID]
@@ -50,25 +61,19 @@ func (sc *TestCoord) TaskDone(co *Coordinator,
   }
 
   result := int(DoneValues["result"].(float64))
-  if v == 1 {
-    sc.results = append(sc.results, result)
-
-    if len(sc.results) == sc.numSubTasks {
-      sc.goPy(co, "sum", sc.results, 2)
-    }
-	} else if v == 2 {
+  if v == 2 {
     co.Finish([]TaskID{TID})
     sc.result = result
   }
 }
 
 // Returns 0 if not finished, > 0 when done
-func (sc *TestCoord) Result() int {
+func (sc *PreReqCoord) Result() int {
   return sc.result
 }
 
-func MakeTestCoord() *TestCoord {
-	sc := new(TestCoord)
+func MakePreReqCoord() *PreReqCoord {
+	sc := new(PreReqCoord)
 	return sc
 }
 
