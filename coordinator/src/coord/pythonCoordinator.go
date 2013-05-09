@@ -20,12 +20,19 @@ type AllCoordinator struct {
   id int64
   l net.Listener
   co *Coordinator
+
+  result int // ONLY FOR TESTING
 }
 
 type StartTaskParams struct {
   Name string
   Base []interface{}
   Keys []string
+}
+
+type FinishParams struct {
+  TaskIDs []TaskID
+  Values map[string]interface{} // only for testing!!
 }
 
 func (ac *AllCoordinator) startServer() {
@@ -69,6 +76,11 @@ func (ac *AllCoordinator) handleQuery(trigger, jsons string, conn net.Conn) {
     if parseerr != nil { log.Fatal(parseerr) }
     tid := ac.startTask(args)
     fmt.Fprintf(conn, "{\"tid\" : %d }", tid)
+  } else if trigger == "finish" {
+    args := &FinishParams{}
+    parseerr := json.Unmarshal([]byte(jsons), args)
+    if parseerr != nil { log.Fatal(parseerr) }
+    ac.finish(args)
   }
   conn.Close()
 }
@@ -82,6 +94,16 @@ func (ac *AllCoordinator) startTask(args *StartTaskParams) TaskID {
   params.BaseObject = args.Base
   task := ac.co.StartTask(params)
   return task
+}
+
+func (ac *AllCoordinator) finish(args *FinishParams) {
+  ac.co.Finish(args.TaskIDs)
+
+  ac.result = int(args.Values["result"].(float64))
+}
+
+func (ac *AllCoordinator) Result() int {
+  return ac.result
 }
 
 func (ac *AllCoordinator) startProgram() {
@@ -176,7 +198,7 @@ func (ac *AllCoordinator) ClientDead(co *Coordinator, cid ClientID) {
 }
 
 func MakeAllCoordinator(program string) *AllCoordinator {
-  ac := &AllCoordinator{program, "", "", nrand(), nil, nil}
+  ac := &AllCoordinator{program, "", "", nrand(), nil, nil, 0}
   ac.devSocket = ac.generateSocket("devsocket")
   ac.socket = ac.generateSocket("coordsocket")
   go ac.startServer()

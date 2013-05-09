@@ -18,7 +18,7 @@ class TestCoordinator(TaskSprintCoordinator):
     print "Somebody died :( %d" %cid
 
   def task_done(self, tid, values):
-    self.finish(tid = tid, values = values)
+    self.finish(taskids = [tid], values = values)
     print "Task %d is done. Result: %s" %(tid, values)
 
 TestCoordinator().start()
