@@ -13,7 +13,7 @@ type PreReqCoord struct {
 }
 
 func (sc *PreReqCoord) Init(co *Coordinator, seed int64) {
-  sc.numSubTasks = 100
+  sc.numSubTasks = 300
   sc.tasks = make(map[TaskID]int)
   sc.results = make([]int, 0)
   subtasks := make([]TaskID, sc.numSubTasks)
@@ -43,7 +43,9 @@ func (sc *PreReqCoord) ClientDead(co *Coordinator, CID ClientID) {
 func (sc *PreReqCoord) goPy(co *Coordinator, name string, args []int, taskType int, prereqTasks []TaskID, prereqKeys []string) TaskID {
   params := TaskParams{}
   params.FuncName = name
-  params.DoneKeys = []string{"result"}
+  if prereqTasks != nil {
+    params.DoneKeys = []string{"result"}
+  }
   params.PreReqTasks = prereqTasks
   params.PreReqKey = prereqKeys
   params.BaseObject = args
@@ -60,8 +62,8 @@ func (sc *PreReqCoord) TaskDone(co *Coordinator,
     log.Fatal("TID was never created.")
   }
 
-  result := int(DoneValues["result"].(float64))
   if v == 2 {
+    result := int(DoneValues["result"].(float64))
     co.Finish([]TaskID{TID})
     sc.result = result
   }
