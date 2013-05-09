@@ -68,3 +68,9 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+
+# Latex
+*.pdf
+*.aux
+*.synctex.gz
+*.log
