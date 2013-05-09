@@ -12,6 +12,8 @@ import "encoding/gob"
 import "math/rand"
 import "time"
 import "container/list"
+import "flag"
+import "strings"
 
 type Coordinator struct { 
 	mu sync.Mutex
@@ -136,21 +138,21 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 	co.mu.Lock() 
 	defer co.mu.Unlock()
 	
-	if (op.Op == NIL || seq <= co.currentSeq) { 
+	if (op.Op == NIL || seq <= co.currentSeq) {
 		return co.currentView
-	} 
-	co.currentSeq = seq 
+	}
+	co.currentSeq = seq
 	// First, see if we need to initialize everything 
-	if !co.initialized { 
-		co.dc.Init(co, co.seed) 
+	if !co.initialized {
+		co.dc.Init(co, co.seed)
 		co.initialized = true
-	} 
+	}
 
-	if op.Op == QUERY { 
+	if op.Op == QUERY {
 		// See if the client is new and assign tasks as appropriate
-		_, exists := co.lastQueries[op.CID] 
-		if !exists { 
-			// new client event 
+		_, exists := co.lastQueries[op.CID]
+		if !exists {
+			// new client event
 			co.activeTasks[op.CID] = map[TaskID]bool{}
 			co.availableClients[op.CID] = op.NumNodes
 			// Update our view of how to contact the client 
@@ -158,46 +160,45 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 			co.dc.ClientJoined(co, op.CID)
 			// Increment our view
 			co.currentView.ViewNum++
-		} 
+		}
 		co.lastQueries[op.CID] = 0
 		co.AllocateTasks()
 		// Clone the current view for queries so concurrency doesn't affect it 
 		return cloneView(co.currentView)
-	} else if op.Op == DONE { 
+	} else if op.Op == DONE {
 		// Handle finished tasks 
 		_, alreadyFinished := co.finishedTasks[op.TID]
 		if !alreadyFinished { 
 			co.finishedTasks[op.TID] = true
 			co.dc.TaskDone(co, op.TID, op.DoneValues)
-		} 
+		}
 		// Check to see if this is an active task for this client 
 		_, active := co.activeTasks[op.CID][op.TID] 
-		if active { 
+		if active {
 			co.currentView.FinishedTasks[op.TID] = append(co.currentView.FinishedTasks[op.TID], op.CID)
 			co.currentView.ViewNum++
 			delete(co.activeTasks[op.CID], op.TID)
 			co.availableClients[op.CID]++
 		}
 		co.AllocateTasks()
-	} else if op.Op == TICK { 
+	} else if op.Op == TICK {
 		// Handle ticks to see if Some clients should be considered dead
-		for clientID, ticks := range co.lastQueries { 
-			if ticks+1 == DEAD_TICKS { 
-				// Dead client event 
+		for clientID, ticks := range co.lastQueries {
+			if ticks+1 == DEAD_TICKS {
+				// Dead client event
 				co.ClientDead(clientID)
 				co.dc.ClientDead(co, clientID)
 				co.currentView.ViewNum++
 
 				// If we don't have any more clients and we're done, shut down this replica 
-				if co.isFinished && len(co.availableClients) == 0 { 
+				if co.isFinished && len(co.availableClients) == 0 {
 					co.Kill()
-				} 
-
-			} 
+				}
+			}
 			co.lastQueries[clientID]++
-		} 
+		}
 		co.AllocateTasks()
-	} else if op.Op == LEADER_CHANGE { 
+	} else if op.Op == LEADER_CHANGE {
 		// Handle a leader change 
 		// Only change leaders if the new leader is actually new
 		if op.LeaderNum > co.leaderNum { 
@@ -205,44 +206,44 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 			co.leaderID = op.LeaderID
 			co.lastLeaderElection = time.Now()
 		}
-	} 
+	}
 	return co.currentView
-} 
+}
 
 // Function for driving the paxos log forward if we've lagged a bit 
-func (co *Coordinator) UpdatePaxos() { 
+func (co *Coordinator) UpdatePaxos() {
 	max := co.px.Max()
-	for seq := co.px.Min(); seq <= max && !co.dead; seq++ { 
+	for seq := co.px.Min(); seq <= max && !co.dead; seq++ {
 		oldOp := co.WaitForPaxos(seq, true)
 		co.ApplyPaxosOp(seq, oldOp)
-	} 
+	}
 	co.px.Done(max)
-} 
+}
 
 // Function that attempts to insert an op into the paxos log and 
 // applies each op as it's discovered 
-func (co *Coordinator) PerformPaxos(op Op) View { 
-	// First, catch up if necessary 
-	max := co.px.Max() 
-	for seq := co.px.Min(); seq <= max && !co.dead; seq++ { 
+func (co *Coordinator) PerformPaxos(op Op) View {
+	// First, catch up if necessary
+	max := co.px.Max()
+	for seq := co.px.Min(); seq <= max && !co.dead; seq++ {
 		oldOp := co.WaitForPaxos(seq, true)
 		co.ApplyPaxosOp(seq, oldOp)
-	} 
+	}
 	co.px.Done(max)
 
 	// Perform Paxos until we succeed 
-	for seq := max+1; !co.dead; seq++ { 
+	for seq := max+1; !co.dead; seq++ {
 		co.px.Start(seq, op)
 		v := co.WaitForPaxos(seq, false)
-		// Apply the op 
+		// Apply the op
 		view := co.ApplyPaxosOp(seq, v)
 		co.px.Done(seq)
-		if opsEqual(op, v) { 
+		if opsEqual(op, v) {
 			return view
-		} 
-	} 
+		}
+	}
 	return View{}
-} 
+}
 
 // Used to change leaders and to update the view of who's dead if we're the leader 
 func (co *Coordinator) tick() { 
@@ -508,6 +509,34 @@ func StartServer(servers []string, me int, dc DeveloperCoord, numTaskReplicas in
 	return co
 } 
 
-func main() { 
+func main() {
 	
-} 
+	servers := flag.String("servers", "", "comma-seperated list of servers")
+	meIndex := flag.Int("me", 0, "The index in servers corresponding to this server")
+	numTaskReplicas := flag.Int("n", 1, "The number of replicas we make for each task")
+	seed := flag.Int64("seed", 0, "The seed assigned to this coordinator")
+	developerCoord := flag.String("dc", "", "The requested developer coordinator")
+	M := flag.Int("M", 1, "The M parameter for the map reduce coordinator")
+	R := flag.Int("R", 1, "The R parameter for the map reduce coordinator")
+	input := flag.String("input", "", "The input to the coordinator")
+
+	flag.Parse()
+
+	if *servers == "" || *meIndex == 0 || *developerCoord == "" {
+		log.Fatal("usage: -servers ip:port[,ip:port] -me int -n int -seed int64 -dc coord")
+	}
+
+	serverNames := strings.Split(*servers, ",")
+
+	// For now, just start a basic test coordinator
+	var dc DeveloperCoord
+	if *developerCoord == "test" {
+		dc = MakeTestCoord()
+	} else if *developerCoord == "mapreduce" {
+		dc = MakeMapReduceCoord(*M, *R, *input)
+	} else {
+		log.Fatal("dc parameter must be one of the following: test, mapreduce")
+	}
+	StartServer(serverNames, *meIndex, dc, *numTaskReplicas, *seed)
+
+}

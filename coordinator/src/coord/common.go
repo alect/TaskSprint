@@ -63,7 +63,7 @@ func cloneView(oldView View) View {
 		i := 0
 		for _, cid := range newView.TaskAssignments[tid] {
 			// Check to see if this cid is already finished
-			cidFinished := false 
+			cidFinished := false
 			for _, finishedCid := range finishedClients {
 				if cid == finishedCid {
 					cidFinished = true
