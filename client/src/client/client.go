@@ -103,12 +103,12 @@ func (c *Client) processView(view *coordinator.View) {
   defer c.viewMu.Unlock()
 
   /* myTasks := c.ExtractTasks(view) */
-  myTasksOld := c.ExtractTasks(view)
+  //myTasksOld := c.ExtractTasks(view)
   myTasks := c.ExtractTasksNew(view)
 
-  fmt.Printf("New: %v\n", myTasks)
+  //fmt.Printf("New: %v\n", myTasks)
   /* fmt.Printf("New: %v\n\n", myTasksNew) */
-  fmt.Printf("Old: %v\n\n", myTasksOld)
+  //fmt.Printf("Old: %v\n\n", myTasksOld)
 
   newTasks, killedTasks := c.SplitTasks(myTasks)
   c.killTasks(killedTasks)

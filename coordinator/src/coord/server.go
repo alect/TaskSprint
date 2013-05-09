@@ -139,8 +139,9 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 	defer co.mu.Unlock()
 	
 	if (op.Op == NIL || seq <= co.currentSeq) {
-		return cloneView(co.currentView)
+		return co.currentView
 	}
+	oldViewNum := co.currentView.ViewNum
 	co.currentSeq = seq
 	// First, see if we need to initialize everything 
 	if !co.initialized {
@@ -164,7 +165,7 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 		co.lastQueries[op.CID] = 0
 		co.AllocateTasks()
 		// Clone the current view for queries so concurrency doesn't affect it 
-		return cloneView(co.currentView)
+		//return cloneView(co.currentView)
 	} else if op.Op == DONE {
 		// Handle finished tasks 
 		_, alreadyFinished := co.finishedTasks[op.TID]
@@ -207,7 +208,10 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 			co.lastLeaderElection = time.Now()
 		}
 	}
-	return cloneView(co.currentView)
+	if co.currentView.ViewNum > oldViewNum {
+		(&co.currentView).updateView()
+	}
+	return co.currentView
 }
 
 // Function for driving the paxos log forward if we've lagged a bit 

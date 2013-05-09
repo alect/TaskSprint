@@ -33,6 +33,32 @@ type View struct {
 	ClientInfo map[ClientID]string // How to contact a particular client. 
 } 
 
+func (v *View) updateView() { 
+	v.Tasks = map[TaskID]TaskInfo{}
+	for tid, params := range v.TaskParams { 
+		finishedClients := make([]ClientID, len(v.FinishedTasks[tid]))
+		copy(finishedClients, v.FinishedTasks[tid])
+		// Figure out what the pending clients are 
+		pendingClients := make([]ClientID, len(v.TaskAssignments[tid]) - len(finishedClients))
+		i := 0
+		for _, cid := range v.TaskAssignments[tid] {
+			// Check to see if this cid is already finished
+			cidFinished := false
+			for _, finishedCid := range finishedClients {
+				if cid == finishedCid {
+					cidFinished = true
+					break
+				}
+			}
+			if !cidFinished {
+				pendingClients[i] = cid
+				i++
+			}
+		}
+		v.Tasks[tid] = TaskInfo{ params, pendingClients, finishedClients }
+	}
+}
+
 // To avoid concurrency issues when we're returning from a query, we clone the view.
 func cloneView(oldView View) View { 
 	newView := View{}
