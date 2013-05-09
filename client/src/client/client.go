@@ -179,9 +179,15 @@ func (c *Client) runTask(task *Task) {
   /* fmt.Printf("Running task\t %d on\t %s\n", task.id, node.socket) */
   /* fmt.Printf("params: %v\n", params) */
 
-  // Connecting to node and marking task as started
+  // Trying to connect to node
   node.status, task.status = Busy, Started
   conn, err := net.Dial("unix", node.socket)
+  for tries := 0; tries < 20 && err != nil; tries++ {
+    time.Sleep(250 * time.Millisecond)
+    conn, err = net.Dial("unix", node.socket)
+  }
+
+  // Unsuccessful; die
   if err != nil { log.Fatal("Node is dead.", err) }
 
   // Sending data 
@@ -268,13 +274,11 @@ func (c *Client) initNodes() int {
   cpus := runtime.NumCPU();
   c.nodes = make([]*Node, cpus)
   for i := 0; i < cpus; i++ {
-    socket := "/tmp/ts-client-node-"
-    socket += strconv.FormatInt(int64(c.id), 10) + "-" + strconv.Itoa(i)
+    socket := c.generateNodeSocket(i)
     node := &Node{socket, Free, nil}
     c.nodes[i] = node
     c.startNode(node)
   }
-  time.Sleep(400 * time.Millisecond)
   fmt.Printf("%d nodes initialized.\n", cpus)
   return cpus
 }
@@ -335,6 +339,8 @@ func (c *Client) Kill() {
   for _, node := range c.nodes {
     c.killNode(node)
   }
+
+  c.clearNodeSockets();
 }
 
 func nrand() int64 {
@@ -348,3 +354,17 @@ func main() {
   Init(InitFlags()).Start()
 }
 
+func (c *Client) generateNodeSocket(host int) string {
+  s := "/tmp/tsclient-"
+  s += strconv.FormatInt(int64(c.id), 10) + "/"
+  os.Mkdir(s, 0777)
+  s +=  "nodesocket-"
+  s += strconv.Itoa(host)
+  return s
+}
+
+func (c *Client) clearNodeSockets() {
+  s := "/tmp/tsclient-"
+  s += strconv.FormatInt(int64(c.id), 10) + "/"
+  os.RemoveAll(s)
+}
