@@ -378,7 +378,7 @@ func TestMultipleSimpleWithDelayAndPreReqs(t *testing.T) {
   cleanup(coa)
 
   // Time to really clear open sockets/files
-  time.Sleep(3 * time.Second)
+  time.Sleep(5 * time.Second)
 }
 
 func TestOOSQuitThenJoinPreReq(t *testing.T) {
@@ -415,7 +415,7 @@ func TestOOSQuitThenJoinPreReq(t *testing.T) {
   cleanup(coa)
 
   // Time to really clear open sockets/files
-  time.Sleep(3 * time.Second)
+  time.Sleep(5 * time.Second)
 }
 
 func TestMultipleOOSQuitThenJoinPreReq(t *testing.T) {
@@ -445,7 +445,7 @@ func TestMultipleOOSQuitThenJoinPreReq(t *testing.T) {
     }
 
     // Let it rest
-    time.Sleep(4 * time.Second)
+    time.Sleep(5 * time.Second)
   }
 
   cleanup(coa)
