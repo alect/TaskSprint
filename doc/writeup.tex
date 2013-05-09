@@ -22,8 +22,11 @@ TaskSprint is split into two major components, a replicated coordinator and a cl
 
 \subsection {Coordinator} 
 
-The coordinator is a paxos-replicated event-driven server that handles assignment of tasks to individual clients. The replication ensures that the system continues as long as a majority of the replicas are capable of communicating. Clients query the coordinator for the latest ``View'' of task assignments and notify the coordinator when tasks are completed.
+The coordinator is a paxos-replicated event-driven server that handles assignment of tasks to individual clients. The replication ensures that the system continues as long as a majority of the replicas are capable of communicating. Clients query the coordinator for the latest ``View'' of task assignments and notify the coordinator when tasks are completed. This view includes a mapping of task IDs to clients and the parameters for each task ID (which include task name, a random seed, and a list of pre-requisite tasks that provide additional input). 
 
+When a client hasn't queried the coordinator during a certain period of time, the coordinator marks the client as dead and reassigns its tasks. A single replica known as the ``leader'' periodically inserts ``TICK'' operations into the paxos log to ensure that the replicas agree exactly when clients died in relation to other operations. New leaders are periodically elected via paxos to handle leader failure. 
+
+Our coordinator communicates events to a developer-provided event handler. This handler receives notifications of finished tasks along with short pieces of output data (requested when the task started) and can then tell the coordinator to start new tasks or kill existing tasks, or end the computation. These event handlers are very simple and easy to implement while providing developers a large amount of flexibility for their computations. For instance, the genetic algorithm handler is able to group similar solutions for cross-over and the bitcoin miner is able to kill tasks to free resources when solutions are found. 
 
 \subsection {Client} 
 
