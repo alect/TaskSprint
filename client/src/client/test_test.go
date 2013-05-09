@@ -130,7 +130,7 @@ seed int64) ([]*coordinator.Coordinator, []string, []*coordinator.TestCoord) {
     kvh[i] = port("basic", i)
   }
   for i := 0; i < nservers; i++ {
-    coa[i] = coordinator.StartServer(kvh, i, sca[i], numTaskReplicas, seed)
+    coa[i] = coordinator.StartServer(kvh, i, sca[i], numTaskReplicas, seed, "unix")
   }
 
   return coa, kvh, sca
@@ -153,7 +153,7 @@ seed int64) ([]*coordinator.Coordinator, []string, []*coordinator.PreReqCoord) {
     kvh[i] = port("basic", i)
   }
   for i := 0; i < nservers; i++ {
-    coa[i] = coordinator.StartServer(kvh, i, sca[i], numTaskReplicas, seed)
+    coa[i] = coordinator.StartServer(kvh, i, sca[i], numTaskReplicas, seed, "unix")
   }
 
   return coa, kvh, sca
@@ -166,6 +166,7 @@ func CreateClients(numClient int, kvh []string) []*Client {
       kvh,
       port("clientsocket", i),
       "./../../../libraries/client/python/testNode.py",
+			"unix",
     }
 
     clients[i] = Init(options)

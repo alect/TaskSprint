@@ -12,10 +12,9 @@ import "encoding/gob"
 import "math/rand"
 import "time"
 import "container/list"
-import "flag"
-import "strings"
 
 type Coordinator struct { 
+	socktype string // The type of sockets used (unix for tests tcp for deployment)
 	mu sync.Mutex
 	l net.Listener
 	me int 
@@ -435,11 +434,20 @@ func (co *Coordinator) Kill() {
 	co.px.Kill()
 } 
 
+// So that we can start ticks and block if necessary 
+func (co *Coordinator) StartTicks() {
+	for !co.dead {
+		co.tick()
+		time.Sleep(250 * time.Millisecond)
+	}
+}
 
-func StartServer(servers []string, me int, dc DeveloperCoord, numTaskReplicas int, seed int64) *Coordinator { 
+
+func StartServer(servers []string, me int, dc DeveloperCoord, numTaskReplicas int, seed int64, socktype string) *Coordinator { 
 	gob.Register(Op{})
 
 	co := new(Coordinator)
+	co.socktype = socktype
 	co.me = me 
 	co.dc = dc 
 	co.currentView = View{ 0, false, nil, map[TaskID]TaskParams{}, map[TaskID][]ClientID{}, map[TaskID][]ClientID{}, map[TaskID]TaskInfo{}, map[ClientID]string{}}
@@ -463,11 +471,11 @@ func StartServer(servers []string, me int, dc DeveloperCoord, numTaskReplicas in
 	rpcs := rpc.NewServer()
 	rpcs.Register(co)
 
-	co.px = paxos.Make(servers, me, rpcs)
+	co.px = paxos.Make(servers, me, rpcs, socktype)
 
 	// TODO: change this implementation for TCP sockets when necessary 
 	os.Remove(servers[me])
-	l, e := net.Listen("unix", servers[me])
+	l, e := net.Listen(co.socktype, servers[me])
 	if e != nil { 
 		log.Fatal("listen error: ", e)
 	} 
@@ -503,44 +511,10 @@ func StartServer(servers []string, me int, dc DeveloperCoord, numTaskReplicas in
 		} 
 	}() 
 
-	go func() { 
-		for !co.dead { 
-			co.tick()
-			time.Sleep(250 * time.Millisecond)
-		} 
-	} ()
+	if socktype != "tcp" {
+		go co.StartTicks()
+	}
 
 	return co
 } 
 
-func main() {
-	
-	servers := flag.String("servers", "", "comma-seperated list of servers")
-	meIndex := flag.Int("me", 0, "The index in servers corresponding to this server")
-	numTaskReplicas := flag.Int("n", 1, "The number of replicas we make for each task")
-	seed := flag.Int64("seed", 0, "The seed assigned to this coordinator")
-	developerCoord := flag.String("dc", "", "The requested developer coordinator")
-	M := flag.Int("M", 1, "The M parameter for the map reduce coordinator")
-	R := flag.Int("R", 1, "The R parameter for the map reduce coordinator")
-	input := flag.String("input", "", "The input to the coordinator")
-
-	flag.Parse()
-
-	if *servers == "" || *meIndex == 0 || *developerCoord == "" {
-		log.Fatal("usage: -servers ip:port[,ip:port] -me int -n int -seed int64 -dc coord")
-	}
-
-	serverNames := strings.Split(*servers, ",")
-
-	// For now, just start a basic test coordinator
-	var dc DeveloperCoord
-	if *developerCoord == "test" {
-		dc = MakeTestCoord()
-	} else if *developerCoord == "mapreduce" {
-		dc = MakeMapReduceCoord(*M, *R, *input)
-	} else {
-		log.Fatal("dc parameter must be one of the following: test, mapreduce")
-	}
-	StartServer(serverNames, *meIndex, dc, *numTaskReplicas, *seed)
-
-}
