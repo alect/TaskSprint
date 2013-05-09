@@ -248,6 +248,8 @@ func (c *Client) fetchParams(params *coordinator.TaskParams) string {
         /* fmt.Printf("Got %v\n", datum) */
       }
     }
+    // Pause before retrying
+    time.Sleep(250 * time.Millisecond)
   }
 
   return c.getJson(params.FuncName, data)
