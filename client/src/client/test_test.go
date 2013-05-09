@@ -250,20 +250,20 @@ func CreateClients(numClient int, kvh []string, st string) []*Client {
   return clients
 }
 
-func TestSimple(t *testing.T) {
-	fmt.Printf("Test: Single Client\n")
+/* func TestSimple(t *testing.T) { */
+/* 	fmt.Printf("Test: Single Client\n") */
 
-  // Set up coordinators and clients
-  numTaskReplicas, nservers, numClient := 1, 3, 1;
-  coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "unix")
-  clients := CreateClients(numClient, kvh, "unix")
+/*   // Set up coordinators and clients */
+/*   numTaskReplicas, nservers, numClient := 1, 3, 1; */
+/*   coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "unix") */
+/*   clients := CreateClients(numClient, kvh, "unix") */
 
-  // Run the computation, timeout in 15 seconds
-  Run(clients, nservers, sca, 15, true)
+/*   // Run the computation, timeout in 15 seconds */
+/*   Run(clients, nservers, sca, 15, true) */
 
-  // Cleanup the coordinators
-  cleanup(coa)
-}
+/*   // Cleanup the coordinators */
+/*   cleanup(coa) */
+/* } */
 
 /* func TestSimpleTCP(t *testing.T) { */
 /*   fmt.Printf("Test: Single Client: TCP\n") */
@@ -280,27 +280,27 @@ func TestSimple(t *testing.T) {
 /*   cleanup(coa) */
 /* } */
 
-func TestMultipleSimple(t *testing.T) {
-	fmt.Printf("Test: Multiple Clients\n")
+/* func TestMultipleSimple(t *testing.T) { */
+/* 	fmt.Printf("Test: Multiple Clients\n") */
 
-  // Set up coordinators and clients
-  numTaskReplicas, nservers, numClient := 1, 3, 7;
-  coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "unix")
-  clients := CreateClients(numClient, kvh, "unix")
+/*   // Set up coordinators and clients */
+/*   numTaskReplicas, nservers, numClient := 1, 3, 7; */
+/*   coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "unix") */
+/*   clients := CreateClients(numClient, kvh, "unix") */
 
-  // Run the computation, timeout in 10 seconds
-  Run(clients, nservers, sca, 10, true)
+/*   // Run the computation, timeout in 10 seconds */
+/*   Run(clients, nservers, sca, 10, true) */
 
-  // Cleanup the coordinators
-  cleanup(coa)
-}
+/*   // Cleanup the coordinators */
+/*   cleanup(coa) */
+/* } */
 
 /* func TestMultipleSimpleWithDelay(t *testing.T) { */
 /* 	fmt.Printf("Test: Multiple Clients with Join Delay\n") */
 
 /*   numTaskReplicas, nservers, numClient := 1, 3, 5; */
-/*   coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0) */
-/*   clients := CreateClients(numClient, kvh) */
+/*   coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "unix") */
+/*   clients := CreateClients(numClient, kvh, "unix") */
 
 /*   for _, c := range clients { */
 /*     go c.Start() */
@@ -542,17 +542,17 @@ func TestMultipleSimple(t *testing.T) {
 /*   cleanup(coa) */
 /* } */
 
-/* /1* func TestSimplyPython(t *testing.T) { *1/ */
-/* /1* 	fmt.Printf("Test: Single Client With Python Coordinator\n") *1/ */
+func TestSimplyPython(t *testing.T) {
+	fmt.Printf("Test: Single Client With Python Coordinator\n")
 
-/* /1*   // Set up coordinators and clients *1/ */
-/* /1*   numTaskReplicas, nservers, numClient := 1, 1, 1; *1/ */
-/* /1*   coa, kvh, sca := CreatePythonCoords(nservers, numTaskReplicas, 0) *1/ */
-/* /1*   clients := CreateClients(numClient, kvh) *1/ */
+  // Set up coordinators and clients
+  numTaskReplicas, nservers, numClient := 1, 1, 1;
+  coa, kvh, sca := CreatePythonCoords(nservers, numTaskReplicas, 0, "unix")
+  clients := CreateClients(numClient, kvh, "unix")
 
-/* /1*   // Run the computation, timeout in 15 seconds *1/ */
-/* /1*   RunPython(clients, nservers, sca, 15, true) *1/ */
+  // Run the computation, timeout in 15 seconds
+  RunPython(clients, nservers, sca, 15, true)
 
-/* /1*   // Cleanup the coordinators *1/ */
-/* /1*   cleanup(coa) *1/ */
-/* /1* } *1/ */
+  // Cleanup the coordinators
+  cleanup(coa)
+}

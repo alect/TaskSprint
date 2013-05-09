@@ -1,7 +1,7 @@
 package coordinator 
 
 import "log"
-import "fmt"
+/* import "fmt" */
 
 type TestCoord struct {
 	currentTask TaskID
@@ -59,7 +59,7 @@ func (sc *TestCoord) TaskDone(co *Coordinator,
       sc.goPy(co, "sum", sc.results, 2)
     }
 	} else if v == 2 {
-    fmt.Printf("Received: %d\n", result)
+    /* fmt.Printf("Received: %d\n", result) */
     co.Finish([]TaskID{TID})
     sc.result = result
   }

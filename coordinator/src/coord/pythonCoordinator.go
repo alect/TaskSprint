@@ -24,7 +24,7 @@ type AllCoordinator struct {
 
 type StartTaskParams struct {
   Name string
-  Base []int
+  Base []interface{}
   Keys []string
 }
 
