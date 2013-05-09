@@ -28,7 +28,7 @@ type View struct {
 	TaskAssignments map[TaskID][]ClientID
 	FinishedTasks map[TaskID][]ClientID
 
-	TaskInfo map[TaskID]TaskInfo
+	Tasks map[TaskID]TaskInfo
 
 	ClientInfo map[ClientID]string // How to contact a particular client. 
 } 
@@ -54,7 +54,7 @@ func cloneView(oldView View) View {
 		newView.ClientInfo[k] = v
 	}
 	// Build a new task info map out of the existing info 
-	newView.TaskInfo = map[TaskID]TaskInfo{}
+	newView.Tasks = map[TaskID]TaskInfo{}
 	for tid, params := range newView.TaskParams { 
 		finishedClients := make([]ClientID, len(newView.FinishedTasks[tid]))
 		copy(finishedClients, newView.FinishedTasks[tid])
@@ -75,7 +75,7 @@ func cloneView(oldView View) View {
 				i++
 			}
 		}
-		newView.TaskInfo[tid] = TaskInfo{ params, pendingClients, finishedClients }
+		newView.Tasks[tid] = TaskInfo{ params, pendingClients, finishedClients }
 	}
 	return newView
 }
