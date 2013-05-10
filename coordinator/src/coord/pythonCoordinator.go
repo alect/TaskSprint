@@ -94,6 +94,7 @@ func (ac *AllCoordinator) startTask(args *StartTaskParams) TaskID {
   params.PreReqTasks = args.Pretasks
   params.PreReqKey = args.Prekeys
   params.BaseObject = args.Base
+  fmt.Printf("Calling coordinator StartTask with params: %v\n", params)
   task := ac.co.StartTask(params)
   return task
 }
@@ -189,6 +190,7 @@ func (ac *AllCoordinator) Init(co *Coordinator, seed int64) {
 
 func (ac *AllCoordinator) TaskDone(co *Coordinator,
 tid TaskID, values map[string]interface{}) {
+  fmt.Println("Done", values)
   ac.trigger("task_done", []interface{}{int64(tid), values})
 }
 

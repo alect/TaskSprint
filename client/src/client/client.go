@@ -102,13 +102,11 @@ func PrintView(view *coordinator.View) {
 }
 
 func (c *Client) processView(view *coordinator.View) {
-  /* PrintView(view) */
+  PrintView(view)
   c.viewMu.Lock()
   defer c.viewMu.Unlock()
 
-
   c.currentView = *view;
-
   //myTasksNew := c.ExtractTasksNew(view)
   myTasks := c.ExtractTasks(view)
 
@@ -187,7 +185,7 @@ func (c *Client) killTasks(tasks []coordinator.TaskID) {
 
 func (c *Client) scheduleTasks(tasks []coordinator.TaskID,
 args map[coordinator.TaskID]coordinator.TaskParams) {
-  /* fmt.Printf("Scheduling %v\n", tasks) */
+  fmt.Printf("Scheduling %v\n", tasks)
   t := 0
   for i := 0; i < len(c.nodes) && t < len(tasks); i++ {
     if c.nodes[i].status == Free {
@@ -258,7 +256,7 @@ func (c *Client) fetchParams(params *coordinator.TaskParams) string {
 }
 
 func (c *Client) runTask(task *Task) {
-  /* fmt.Printf("Running %v\n", task) */
+  fmt.Printf("Running %v\n", task)
   node, params := task.node, task.params
   data := c.fetchParams(&params)
 
@@ -360,12 +358,12 @@ func (c *Client) startNode(node *Node) {
 
   stdout, outerr := cmd.StdoutPipe()
   if outerr != nil { log.Fatal("Error getting stdout: ", outerr) }
-  stderr, errerr := cmd.StderrPipe()
-  if errerr != nil { log.Fatal(errerr) }
+  /* stderr, errerr := cmd.StderrPipe() */
+  /* if errerr != nil { log.Fatal(errerr) } */
 
   if err := cmd.Start(); err != nil { log.Fatal(err) }
   go io.Copy(os.Stdout, stdout)
-  go io.Copy(os.Stderr, stderr)
+  /* go io.Copy(os.Stderr, stderr) */
 }
 
 func (c *Client) initNodes() int {
