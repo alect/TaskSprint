@@ -34,7 +34,7 @@ The client's main tasks are to launch nodes, schedule tasks on nodes, and handle
 
 A client is alerted of new tasks by polling the coordinator for the most recent view. The client checks for changes to task assignments, finds tasks intended for it, and identifies any dependencies for its tasks. If there are dependencies, a client must satisfy them before executing the task. To do this, the dependent client communicates with the supplying clients responsible for the pre-requisite tasks. If nodes on a supplying client have completed the pre-requisite task, the needed data, if any, is transferred to the dependent client. This is done on a rolling basis such that data is transferred asynchronously as soon as a pre-requisite tasks are complete.
 
-Once the client has obtained the necessary input data for a task, either by satisfying dependencies or directly from the scheduler, the data is serialized according to the JSON driven, language-agnostic protocol and the task is executed on an available node. Upon completion, a node notifies its client with the results. The client stores the results so that is may respond satisfy future dependencies and notifies the coordinator about the task's completion.
+Once the client has obtained the necessary input data for a task, either by satisfying dependencies or directly from the scheduler, the data is serialized according to the JSON driven, language-agnostic protocol and the task is executed on an available node. Upon completion, a node notifies its client with the results. The client stores the results so that is may satisfy future dependencies and notifies the coordinator about the task's completion.
 
 \section {Examples}
 
