@@ -12,9 +12,9 @@
 
 \section {Introduction} 
 
-MapReduce is a popular distributed computation system because it provides a very simple programming interface for performing large computations over clusters of machines. Unfortunately, MapReduce has some limitations that prevent it from being a good solution for certain problems. These limitations include a vulnerable master server, no support for non-deterministic computations, and a slow synchronization period between the map and reduce phases. 
+MapReduce is a popular distributed computation system because it provides a very simple programming interface for performing large computations over clusters of machines. Unfortunately, MapReduce has some limitations that prevent it from being a good solution for certain problems. These limitations include a vulnerable master server, no support for non-deterministic computations, and a slow synchronization period between the map and reduce phases. To solve these limitations, we developed TaskSprint, a fault-tolerant distrbuted computation system with a high degree of flexibility.  
 
-Solving these limitations is difficult because increasing the generality of MapReduce runs the risk of exposing developers to a more complex and unwieldly programming interface. To solve this problem, we hide as much of the operation of the system from developers as we can without breaking the generality of the system. Developers define tasks by writing simple functions in a programming language of their choice. We also allow developers to define their own coordinators with a simple language-agnostic interface. While requiring developers to provide their own coordinators decreases the usability of the system, we believe most developers will rely on pre-written coordinators that solve common tasks. 
+Solving the limitations of MapReduce is a difficult problem because increasing the generality of MapReduce runs the risk of exposing developers to a more complex and unwieldly programming interface. To solve this problem, we hide as much of the operation of the system from developers as we can without breaking the generality of our system. Developers define tasks by writing simple functions in a programming language of their choice. Developers also define their own coordination functions with a simple language-agnostic interface. While requiring developers to provide their own coordinators decreases the usability of the system, we believe most developers will rely on pre-written coordinators that solve common tasks. The flexibility provided by our system allows it to be used for a large variety of distributed computation tasks. 
 
 \section {Design}
 
@@ -26,13 +26,13 @@ The coordinator is a paxos-replicated event-driven server that handles assignmen
 
 When a client hasn't queried the coordinator during a certain period of time, the coordinator marks the client as dead and reassigns its tasks. A single replica known as the ``leader'' periodically inserts ``TICK'' operations into the paxos log to ensure that the replicas agree exactly when clients died in relation to other operations. New leaders are periodically elected via paxos to handle leader failure. 
 
-Our coordinator communicates events to a developer-provided event handler. This handler receives notifications of finished tasks along with short pieces of output data (requested when the task started) and can then tell the coordinator to start new tasks or kill existing tasks, or end the computation. These event handlers are very simple and easy to implement while providing developers a large amount of flexibility for their computations. For instance, the genetic algorithm handler is able to group similar solutions for cross-over and the bitcoin miner is able to kill tasks to free resources when solutions are found. 
+Our coordinator communicates events to a developer-provided event handler. This handler receives notifications of finished tasks along with short pieces of output data (requested when the task started) and can then tell the coordinator to start new tasks, kill existing tasks, or end the computation. These event handlers are very simple and easy to implement while providing developers a large amount of flexibility for their computations. For instance, the genetic algorithm handler is able to group similar solutions for cross-over and the bitcoin mining handler is able to kill tasks to free resources when solutions are found. 
 
 \subsection {Client} 
 
 \section {Examples}
 
-We implemented three example programs to show off the generality of our system. These examples include a parallel genetic algorithm, a bitcoin mining program, and MapReduce. 
+We implemented three example programs to show off the generality of our system. These examples include a parallel genetic algorithm, a bitcoin mining program, and a MapReduce implementation. 
 
 \subsection {Genetic Algorithm} 
 
