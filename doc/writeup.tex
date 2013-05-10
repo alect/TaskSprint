@@ -22,19 +22,19 @@ TaskSprint's infrastructure is centered on two major components: the coordinator
 
 \subsection {Coordinator} 
 
-The coordinator is a Paxos-replicated, event-driven state-machine that responds to clients' requests for the current task schedule. The replication ensures that the system continues as long as a majority of the replicas are capable of communicating. 
-
-Clients query the coordinator for the latest ``view'', the task schedule, and notify the coordinator when tasks are completed by nodes. A view includes a mapping of tasks to clients in addition to the parameters for each task as defined by the user's scheduler. Parameters include task name, task arguments, and task dependencies. 
+The coordinator is a Paxos-replicated, event-driven state-machine that responds to clients' requests for the current task schedule. Clients query the coordinator for the latest ``view'', the task schedule, and notify the coordinator when tasks are completed by nodes. A view includes a mapping of tasks to clients in addition to task parameters as defined by the user's scheduler. Parameters include task name, task arguments, and task dependencies. 
 
 The coordinator monitors the liveliness of a clients. When a client hasn't queried the coordinator for a certain period of time, the coordinator marks the client as dead and reassigns its tasks. A single replica known as the ``leader'' periodically inserts ``TICK'' operations into the Paxos log to ensure that all replicas exactly agree on when clients died in relation to other operations. New leaders are periodically elected via Paxos to handle leader failure.
 
 The coordinator communicates events to the user's scheduler. In response to events, the scheduler can start new tasks, kill existing tasks, or end the computation. These event handlers are very simple and easy to implement while providing developers a large amount of flexibility for their computations. For instance, a genetic algorithm scheduler is able to group similar solutions for crossover and a Bitcoin mining scheduler is able to kill tasks to free resources when solutions are found.
 
-\subsection {Client} 
+\subsection {Client}
 
-A client periodically queries the coordinator for new views and checks for changes to the task assignments. When it finds an assignment to itself that it hasn't seen before, it calls developer-provided task functions to actually perform the task. If the task specifies specific pre-requisite tasks, the client library handles moving copying data from other clients and provides this data as input to the developer-provided function. Our client library also handles setting the provided random seeds so that developer provided code can operate as if it were completely non-deterministic. 
+The client's main tasks are to launch nodes, schedule tasks on nodes, and handle task dependencies, which may involve efficiently transfering data between nodes and clients. To launch nodes, the client detects the amount of available resources on the machine it is running on and launches a number of nodes proportional to the amount of available resources. The client-node communication is done via IPC using a language-agonistic, JSON driven protocol.
 
-When finished with a task, a client will contact the coordinator and maintain the task's output data until the task is killed. Finally, when the coordinator returns a view marked ``finished'', the client can discard its data and gracefully exit. 
+A client is alerted of new tasks by polling the coordinator for the most recent view. The client checks for changes to task assignments, finds tasks intended for it, and identifies any dependencies for its tasks. If there are dependencies, a client must satisfy them before executing the task. To do this, the dependant client communicates with the supplying clients responsible for the pre-requisite tasks. If nodes on a supplying client have completed the pre-requisite task, the needed data, if any, is transferred to the dependant client. This is done on a rolling basis such that data is transferred asynchronously as soon as a pre-requisite tasks are complete.
+
+Once the client has obtained the necessary input data for a task, either by satisfying dependencies or directly from the scheduler, the data is serialized according to the JSON driven, language-agnostic protocol and the task is executed on an available node. Upon completion, a node notifies its client with the results. The client stores the results so that is may respond satisfy future dependencies and notifies the coordinator about the task's completion.
 
 \section {Examples}
 
