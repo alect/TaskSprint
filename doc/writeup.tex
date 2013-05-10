@@ -1,5 +1,7 @@
 \documentclass [11pt, twocolumn] {article}
-
+%\usepackage[small, compact]{titlesec}
+\usepackage[vmargin=0.5in,hmargin=1in]{geometry}
+\usepackage{amsmath}
 
 \begin{document} 
 
@@ -26,18 +28,32 @@ The coordinator is a paxos-replicated event-driven server that handles assignmen
 
 When a client hasn't queried the coordinator during a certain period of time, the coordinator marks the client as dead and reassigns its tasks. A single replica known as the ``leader'' periodically inserts ``TICK'' operations into the paxos log to ensure that the replicas agree exactly when clients died in relation to other operations. New leaders are periodically elected via paxos to handle leader failure. 
 
-Our coordinator communicates events to a developer-provided event handler. This handler receives notifications of finished tasks along with short pieces of output data (requested when the task started) and can then tell the coordinator to start new tasks, kill existing tasks, or end the computation. These event handlers are very simple and easy to implement while providing developers a large amount of flexibility for their computations. For instance, the genetic algorithm handler is able to group similar solutions for cross-over and the bitcoin mining handler is able to kill tasks to free resources when solutions are found. 
+Our coordinator communicates events to a developer-provided event handler. This handler receives notifications of finished tasks along with short pieces of output data (requested when the task started) and can then tell the coordinator to start new tasks, kill existing tasks, or end the computation. These event handlers are very simple and easy to implement while providing developers a large amount of flexibility for their computations. For instance, the genetic algorithm handler is able to group similar solutions for cross-over and the Bitcoin mining handler is able to kill tasks to free resources when solutions are found. 
 
 \subsection {Client} 
 
 \section {Examples}
 
-We implemented three example programs to show off the generality of our system. These examples include a parallel genetic algorithm, a bitcoin mining program, and a MapReduce implementation. 
+We implemented three example programs to show off the generality of our system. These examples include a parallel genetic algorithm, a Bitcoin mining program, and a MapReduce implementation. 
 
-\subsection {Genetic Algorithm} 
+\subsection {Multiple Root Finder} 
+
+\newcommand{\abs}[1]{\lvert{#1}\rvert}
+
+A root-finding algorithm finds $x$ for which a function $f(x)$ is 0. While many root-finding algorithms exist, few are equipped to search for multiple roots of a function without new instantiations of the algorithm, initialized with different initial guesses. Our distributed multiple root finder searches a wide solution space stochastically, obviating the need for initial guesses, and evolves multiple clusters of the ``fittest" roots to likely roots within a specified epsilon. The search is defined by a simple set of parameters, including a function of an arbitrary number of variables, a bit resolution, solution space dimensions, solution epsilon, root closeness epsilon, and a search time. It is implemented with a genetic algorithm that runs as a client task, whose initial population is strategically selected by the multiple root finder coordinator code.
+
+Each genetic algorithm task evolves a local population subject to fitness function $-\abs{f(x)}$, a crossover function that produces a child $x$ from parents $x_1$ and $x_2$ by means of an arithmetic average, and a mutation function that randomly flips the lower bits in the bitwise representation of $x$.
+
+The multiple root finder coordinator merges the fittest populations that are clustered near a possible root $x$ into a new genetic algorithm task for further refinement, announces a found root $x$ when its fitness is less than the solution epsilon, and launches new instances of genetic algorithms until its search time expires. The coordinator discards the results of new searches in the neighborhood of previously found roots, only evolving populations near unseen roots.
 
 \subsection {Bitcoin Miner}
 
+Bitcoin mining is the act of cryptographically chaining a new block of Bitcoin transactions to the canonical block chain of pre-existing transactions, by manipulating the new block until its SHA256 hash contains a certain number of leading zeros. It is called mining because the miner is rewarded in newly minted Bitcoins for his or her valid solution. A miner forms a new block from uncommitted transactions advertised on the Bitcoin network, a transaction to him or herself for the current mining reward, and some other fields, including a nonce initialized to zero. The miner then increments the nonce until the hash of the whole block contains a prerequisite number of leading zeros. If the miner finds this solution before another miner does, he or she advertises the solved block to the network, which will eventually accept it in the canonical block chain, thereby rewarding the miner.
+
+Our Bitcoin miner client task performs the repeated nonce iteration and SHA256 hashing of a potential block, reporting the solution nonce to the coordinator if it is found. Our Bitcoin miner coordinator starts tasks with new block data and a starting nonce value. The miner coordinator partitions the 32-bit nonce value space evenly among the number of available clients, starting each with a different nonce value. If a solution is reported by a task, the miner coordinator submits the block to the network, stops all current tasks attempting to solve that block, and starts new tasks with a new block and starting nonces. If a solution to the block is found by a competing miner, our minor coordinator stops all current tasks, and starts new tasks with a new block and starting nonces.
+
 \subsection {MapReduce} 
+
+TODO
 
 \end{document}
