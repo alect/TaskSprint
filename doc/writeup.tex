@@ -32,9 +32,11 @@ Our coordinator communicates events to a developer-provided event handler. This 
 
 \subsection {Client} 
 
-\section {Examples}
+A client periodically queries the coordinator for new views and checks for changes to the task assignments. When it finds an assignment to itself that it hasn't seen before, it calls developer-provided task functions to actually perform the task. If the task specifies specific pre-requisite tasks, the client library handles moving copying data from other clients and provides this data as input to the developer-provided function. Our client library also handles setting the provided random seeds so that developer provided code can operate as if it were completely non-deterministic. 
 
-We implemented three example programs to show off the generality of our system. These examples include a parallel genetic algorithm, a Bitcoin mining program, and a MapReduce implementation. 
+When finished with a task, a client will contact the coordinator and maintain the task's output data until the task is killed. Finally, when the coordinator returns a view marked ``finished'', the client can discard its data and gracefully exit. 
+
+\section {Examples}
 
 \subsection {Multiple Root Finder} 
 
