@@ -4,16 +4,18 @@ import random
 
 class MonteCarloNode(TaskSprintNode):
   @timeout(5)
-  def process(self, values):
+  def process(self):
     while True:
       x, y = random.random(), random.random()
       if x**2 + y**2 < 1: self.inside += 1
       self.total += 1
-    return {"result" : {"inside" : inside, "total" : total}}
 
   def montecarlo(self):
     self.inside, self.total = 0, 0
-    self.process()
+    try:
+      self.process()
+    except TimeoutError:
+      pass
     return {"result" : {"inside" : self.inside, "total" : self.total}}
 
   def merge(self, *results):
@@ -21,6 +23,6 @@ class MonteCarloNode(TaskSprintNode):
     for result in results:
       inside += result["inside"]
       total += result["total"]
-    return {"result" : inside / float(total)}
+    return {"result" : (inside / float(total)) * 4}
 
 MonteCarloNode().start()

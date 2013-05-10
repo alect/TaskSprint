@@ -21,7 +21,7 @@ type AllCoordinator struct {
   l net.Listener
   co *Coordinator
 
-  result int // ONLY FOR TESTING
+  result float64 // ONLY FOR TESTING
 }
 
 type StartTaskParams struct {
@@ -94,7 +94,6 @@ func (ac *AllCoordinator) startTask(args *StartTaskParams) TaskID {
   params.PreReqTasks = args.Pretasks
   params.PreReqKey = args.Prekeys
   params.BaseObject = args.Base
-  fmt.Printf("Calling coordinator StartTask with params: %v\n", params)
   task := ac.co.StartTask(params)
   return task
 }
@@ -103,10 +102,10 @@ func (ac *AllCoordinator) finish(args *FinishParams) {
   ac.co.Finish(args.TaskIDs)
 
   // FOR TESTING ONLY
-  ac.result = int(args.Values["result"].(float64))
+  ac.result = args.Values["result"].(float64)
 }
 
-func (ac *AllCoordinator) Result() int {
+func (ac *AllCoordinator) Result() float64 {
   return ac.result
 }
 
@@ -190,7 +189,6 @@ func (ac *AllCoordinator) Init(co *Coordinator, seed int64) {
 
 func (ac *AllCoordinator) TaskDone(co *Coordinator,
 tid TaskID, values map[string]interface{}) {
-  fmt.Println("Done", values)
   ac.trigger("task_done", []interface{}{int64(tid), values})
 }
 

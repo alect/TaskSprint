@@ -18,6 +18,7 @@ import "crypto/rand"
 import "bytes"
 import "sync"
 import "encoding/json"
+import "encoding/gob"
 
 type Options struct {
   servers []string
@@ -102,7 +103,7 @@ func PrintView(view *coordinator.View) {
 }
 
 func (c *Client) processView(view *coordinator.View) {
-  PrintView(view)
+  /* PrintView(view) */
   c.viewMu.Lock()
   defer c.viewMu.Unlock()
 
@@ -114,8 +115,8 @@ func (c *Client) processView(view *coordinator.View) {
   //fmt.Printf("Old: %v\n\n", myTasks)
 
   newTasks, killedTasks := c.SplitTasks(myTasks)
-  c.killTasks(killedTasks)
-  c.scheduleTasks(newTasks, view.TaskParams)
+  if len(killedTasks) > 0 { c.killTasks(killedTasks) }
+  if len(newTasks) > 0 { c.scheduleTasks(newTasks, view.TaskParams) }
 }
 
 func (c *Client) ExtractTasks(view *coordinator.View) []coordinator.TaskID {
@@ -185,7 +186,7 @@ func (c *Client) killTasks(tasks []coordinator.TaskID) {
 
 func (c *Client) scheduleTasks(tasks []coordinator.TaskID,
 args map[coordinator.TaskID]coordinator.TaskParams) {
-  fmt.Printf("Scheduling %v\n", tasks)
+  /* fmt.Printf("Scheduling %v\n", tasks) */
   t := 0
   for i := 0; i < len(c.nodes) && t < len(tasks); i++ {
     if c.nodes[i].status == Free {
@@ -226,7 +227,7 @@ func (c *Client) getJson(task string, data interface{}) string {
 
 func (c *Client) fetchParams(params *coordinator.TaskParams) string {
   if len(params.PreReqTasks) == 0 {
-    if params.BaseObject == nil { log.Fatal("No prereqs, no base object.") }
+    if params.BaseObject == nil { params.BaseObject = [0]int{}}
     return c.getJson(params.FuncName, params.BaseObject)
   }
 
@@ -256,9 +257,10 @@ func (c *Client) fetchParams(params *coordinator.TaskParams) string {
 }
 
 func (c *Client) runTask(task *Task) {
-  fmt.Printf("Running %v\n", task)
+  /* fmt.Printf("Starting %v\n", task) */
   node, params := task.node, task.params
   data := c.fetchParams(&params)
+  /* fmt.Printf("Running %v\n", task) */
 
   // Trying to connect to node
   node.status, task.status = Busy, Started
@@ -331,6 +333,8 @@ func (c *Client) tick() bool {
 func (c *Client) startServer(socket string) {
   rpcs := rpc.NewServer()
   rpcs.Register(c)
+	gob.Register([]interface{}{})
+	gob.Register(map[string]interface{}{})
 
   if (c.options.socktype == "unix") { os.Remove(socket) }
   l, e := net.Listen(c.options.socktype, socket);
@@ -358,12 +362,12 @@ func (c *Client) startNode(node *Node) {
 
   stdout, outerr := cmd.StdoutPipe()
   if outerr != nil { log.Fatal("Error getting stdout: ", outerr) }
-  /* stderr, errerr := cmd.StderrPipe() */
-  /* if errerr != nil { log.Fatal(errerr) } */
+  stderr, errerr := cmd.StderrPipe()
+  if errerr != nil { log.Fatal(errerr) }
 
   if err := cmd.Start(); err != nil { log.Fatal(err) }
   go io.Copy(os.Stdout, stdout)
-  /* go io.Copy(os.Stderr, stderr) */
+  go io.Copy(os.Stderr, stderr)
 }
 
 func (c *Client) initNodes() int {
