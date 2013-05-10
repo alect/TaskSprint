@@ -228,6 +228,7 @@ func (c *Client) getJson(task string, data interface{}) string {
 
 func (c *Client) fetchParams(params *coordinator.TaskParams) string {
   if len(params.PreReqTasks) == 0 {
+    if params.BaseObject == nil { log.Fatal("No prereqs, no base object.") }
     return c.getJson(params.FuncName, params.BaseObject)
   }
 
@@ -257,7 +258,7 @@ func (c *Client) fetchParams(params *coordinator.TaskParams) string {
 }
 
 func (c *Client) runTask(task *Task) {
-  /* fmt.Printf("Running task\t %d on\t %s\n", task.id, node.socket) */
+  /* fmt.Printf("Running %v\n", task) */
   node, params := task.node, task.params
   data := c.fetchParams(&params)
 
@@ -285,13 +286,17 @@ func (c *Client) runTask(task *Task) {
   // Waiting for result
   buffer := make([]byte, 1024)
   size, readerr := conn.Read(buffer)
-  if readerr != nil { log.Fatal(readerr) }
+  if readerr != nil && readerr != io.EOF {
+    log.Fatal("Error reading result. ", readerr)
+  }
   conn.Close()
 
   // Unserializing and marking as finished
   result := make(map[string]interface{})
-  parseerr := json.Unmarshal(buffer[:size], &result)
-  if parseerr != nil { log.Fatal(parseerr) }
+  if size > 0 {
+    parseerr := json.Unmarshal(buffer[:size], &result)
+    if parseerr != nil { log.Fatal("Error parsing result. ", parseerr) }
+  }
   c.markFinished(task, result)
 }
 
@@ -352,10 +357,15 @@ func (c *Client) startServer(socket string) {
 func (c *Client) startNode(node *Node) {
   // Starting the subproc and copying its stdout to mine
   cmd := exec.Command(c.options.program, node.socket)
+
   stdout, outerr := cmd.StdoutPipe()
-  if outerr != nil { log.Fatal(outerr) }
+  if outerr != nil { log.Fatal("Error getting stdout: ", outerr) }
+  stderr, errerr := cmd.StderrPipe()
+  if errerr != nil { log.Fatal(errerr) }
+
   if err := cmd.Start(); err != nil { log.Fatal(err) }
   go io.Copy(os.Stdout, stdout)
+  go io.Copy(os.Stderr, stderr)
 }
 
 func (c *Client) initNodes() int {

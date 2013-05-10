@@ -197,7 +197,7 @@ delay int, fail bool) {
     go c.Start()
   }
 
-  PollPython(clients, nservers, sca, delay, 10, fail)
+  PollPython(clients, nservers, sca, delay, 7998000, fail)
 
   for _, c := range clients {
     c.Kill()
@@ -542,16 +542,46 @@ func TestMultipleOOSQuitThenJoinPreReq(t *testing.T) {
   cleanup(coa)
 }
 
-func TestSimplyPython(t *testing.T) {
+func TestSimplePython(t *testing.T) {
 	fmt.Printf("Test: Single Client With Python Coordinator\n")
 
   // Set up coordinators and clients
-  numTaskReplicas, nservers, numClient := 1, 1, 1;
+  numTaskReplicas, nservers, numClient := 1, 3, 1;
   coa, kvh, sca := CreatePythonCoords(nservers, numTaskReplicas, 0, "unix")
   clients := CreateClients(numClient, kvh, "unix")
 
   // Run the computation, timeout in 15 seconds
+  RunPython(clients, nservers, sca, 20, true)
+
+  // Cleanup the coordinators
+  cleanup(coa)
+}
+
+func TestMultiplePython(t *testing.T) {
+	fmt.Printf("Test: Multiple Clients, Python Coordinator\n")
+
+  // Set up coordinators and clients
+  numTaskReplicas, nservers, numClient := 1, 3, 5;
+  coa, kvh, sca := CreatePythonCoords(nservers, numTaskReplicas, 0, "unix")
+  clients := CreateClients(numClient, kvh, "unix")
+
+  // Run the computation, timeout in 20 seconds
   RunPython(clients, nservers, sca, 15, true)
+
+  // Cleanup the coordinators
+  cleanup(coa)
+}
+
+func TestMultiplePythonTCP(t *testing.T) {
+  fmt.Printf("Test: Multiple Clients, Python Coordinator: TCP\n")
+
+  // Set up coordinators and clients
+  numTaskReplicas, nservers, numClient := 1, 3, 5;
+  coa, kvh, sca := CreatePythonCoords(nservers, numTaskReplicas, 0, "tcp")
+  clients := CreateClients(numClient, kvh, "tcp")
+
+  // Run the computation, timeout in 15 seconds
+  RunPython(clients, nservers, sca, 20, true)
 
   // Cleanup the coordinators
   cleanup(coa)

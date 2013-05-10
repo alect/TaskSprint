@@ -26,8 +26,10 @@ type AllCoordinator struct {
 
 type StartTaskParams struct {
   Name string
-  Base []interface{}
+  Base interface{}
   Keys []string
+  Prekeys []string
+  Pretasks []TaskID
 }
 
 type FinishParams struct {
@@ -58,7 +60,7 @@ func (ac *AllCoordinator) handleConnection(conn net.Conn) {
   // Waiting for result
   buffer := make([]byte, 1024)
   size, readerr := conn.Read(buffer)
-  if readerr != nil { log.Fatal(readerr) }
+  if readerr != nil { log.Fatal("Error reading query: ", readerr) }
 
   // Unserializing and marking as finished
   queryString := string(buffer[:size])
@@ -69,17 +71,17 @@ func (ac *AllCoordinator) handleConnection(conn net.Conn) {
 }
 
 func (ac *AllCoordinator) handleQuery(trigger, jsons string, conn net.Conn) {
-  fmt.Printf("Received query for %s with params %s\n", trigger, jsons)
+  /* fmt.Printf("Received query for %s with params %s\n", trigger, jsons) */
   if trigger == "start_task" {
     args := &StartTaskParams{}
     parseerr := json.Unmarshal([]byte(jsons), args)
-    if parseerr != nil { log.Fatal(parseerr) }
+    if parseerr != nil { log.Fatal("Error parsing JSON: ", parseerr) }
     tid := ac.startTask(args)
     fmt.Fprintf(conn, "{\"tid\" : %d }", tid)
   } else if trigger == "finish" {
     args := &FinishParams{}
     parseerr := json.Unmarshal([]byte(jsons), args)
-    if parseerr != nil { log.Fatal(parseerr) }
+    if parseerr != nil { log.Fatal("Error parsin JSON: ", parseerr) }
     ac.finish(args)
   }
   conn.Close()
@@ -89,8 +91,8 @@ func (ac *AllCoordinator) startTask(args *StartTaskParams) TaskID {
   params := TaskParams{}
   params.FuncName = args.Name
   params.DoneKeys = args.Keys
-  /* params.PreReqTasks = prereqTasks */
-  /* params.PreReqKey = prereqKeys */
+  params.PreReqTasks = args.Pretasks
+  params.PreReqKey = args.Prekeys
   params.BaseObject = args.Base
   task := ac.co.StartTask(params)
   return task
@@ -99,6 +101,7 @@ func (ac *AllCoordinator) startTask(args *StartTaskParams) TaskID {
 func (ac *AllCoordinator) finish(args *FinishParams) {
   ac.co.Finish(args.TaskIDs)
 
+  // FOR TESTING ONLY
   ac.result = int(args.Values["result"].(float64))
 }
 
@@ -110,7 +113,7 @@ func (ac *AllCoordinator) startProgram() {
   // Starting the subproc and copying its stdout to mine
   cmd := exec.Command(ac.program, ac.devSocket, ac.socket)
   stdout, outerr := cmd.StdoutPipe()
-  if outerr != nil { log.Fatal(outerr) }
+  if outerr != nil { log.Fatal("Error getting stdout: ", outerr) }
   stderr, errerr := cmd.StderrPipe()
   if errerr != nil { log.Fatal(errerr) }
   if err := cmd.Start(); err != nil { log.Fatal(err) }
@@ -144,7 +147,7 @@ func getJson(task string, data interface{}) string {
 }
 
 func (ac *AllCoordinator) trigger(task string, data interface{}) {
-  fmt.Printf("Triggering: %s with %v\n", task, data)
+  /* fmt.Printf("Triggering: %s with %v\n", task, data) */
   dataString := getJson(task, data)
 
   // Trying to connect to python

@@ -3,13 +3,33 @@ from TaskSprintCoordinator import *
 
 class TestCoordinator(TaskSprintCoordinator):
   def init(self, seed):
-    print "Should initialize with a seed: %d" %seed
-    tid = self.start_task(
+    alltasks = []
+    num = 200
+    for i in xrange(num):
+      tid = self.start_task(
         name = "sum",
-        base = [1, 2, 3, 4],
-        keys = ["result"]
+        base = [i * (num / 10) + k for k in range(num / 10)],
+      )
+      alltasks.append(tid)
+
+    finaltasks = []
+    toassign, size = num, num / 10
+    for i in xrange(toassign / size):
+      pretasks = alltasks[i * size : (i + 1) * size]
+      print pretasks
+      tid = self.start_task(
+        name = "sum",
+        prekeys = ["result" for i in range(size)],
+        pretasks = pretasks
+      )
+      finaltasks.append(tid)
+
+    self.final = self.start_task(
+      name = "sum",
+      prekeys = ["result" for i in range(len(finaltasks))],
+      pretasks = finaltasks,
+      keys = ["result"]
     )
-    print "Started task %d" %tid
 
   def client_joined(self, cid):
     print "Somebody joined! %d" %cid
@@ -18,7 +38,8 @@ class TestCoordinator(TaskSprintCoordinator):
     print "Somebody died :( %d" %cid
 
   def task_done(self, tid, values):
-    self.finish(taskids = [tid], values = values)
+    if tid == self.final:
+      self.finish(taskids = [tid], values = values)
     print "Task %d is done. Result: %s" %(tid, values)
 
 TestCoordinator().start()
