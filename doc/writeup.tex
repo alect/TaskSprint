@@ -1,34 +1,34 @@
 \documentclass [11pt, twocolumn] {article}
 %\usepackage[small, compact]{titlesec}
-\usepackage[vmargin=0.5in,hmargin=0.5in]{geometry}
+\usepackage[vmargin=0.25in,hmargin=0.6in]{geometry}
 \usepackage{amsmath}
 
 \begin{document} 
 
 \title { TaskSprint: A general purpose distributed computation system }
-\author{ Alec Thomson \and Sergio Benitez \and Ivan Sergeev }
+\author{ Sergio Benitez \and  Ivan Sergeev \and Alec Thomson  }
 \date {}
 
 \maketitle
 
-
 \section {Introduction} 
+TaskSprint is a general-purpose, fault-tolerant, distributed system for deterministic and non-deterministic computation. TaskSprint differentiates itself from existing systems, like MapReduce and Pig, by allowing non-deterministic computations, allowing arbitrary stage computations (as opposed to two in MapReduce), having no central point of failure (as opposed to Pig/MapReduce's master), being language agnostic, and being computation agnostic.
 
-MapReduce is a popular distributed computation system because it provides a very simple programming interface for performing large computations over clusters of machines. Unfortunately, MapReduce has some limitations that prevent it from being a good solution for certain problems. These limitations include a vulnerable master server, no support for non-deterministic computations, and a slow synchronization period between the map and reduce phases. To solve these limitations, we developed TaskSprint, a fault-tolerant distributed computation system with a high degree of flexibility.  
-
-Solving the limitations of MapReduce is a difficult problem because increasing the generality of MapReduce runs the risk of exposing developers to a more complex and unwieldy programming interface. To solve this problem, we hide as much of the operation of the system from developers as we can without breaking the generality of our system. Developers define tasks by writing simple functions in a programming language of their choice. Developers also define their own coordination functions with a simple language-agnostic interface. While requiring developers to provide their own coordinators decreases the usability of the system, we believe most developers will rely on pre-written coordinators that solve common tasks. The flexibility provided by our system allows it to be used for a large variety of distributed computation tasks. 
+TaskSprint's core challenge is to provide all of these facilities in a fault-tolerant manner while exposing minimal complexity to the user. To this end, TaskSprint's only requirement from the user are two small pieces of software: a scheduler and a node. The scheduler's job is to define a schedule for tasks, and the node's job is implement those tasks. All the intermediate work is handled by the system. This includes distributing and replicating the computation across nodes in the network, handling data shuffling efficiently, handling task dependencies, and dealing with scheduler, node, and network failures.
 
 \section {Design}
 
-TaskSprint is split into two major components, a replicated coordinator and a client program. Each of these components communicates with developer-provided functions to perform general purpose tasks. Seeds for random number generators are deterministically passed between machines in the background to support non-deterministic computations such as genetic algorithms. 
+TaskSprint's infrastructure is centered on two major components: the coordinator and the client. The coordinator communicates with the user's scheduler, and the client communicate's with the user's nodes. The coordinator and the client communicate with each other to execute the user's computation. To support replicated, non-deterministic computations, we seed PRNGs with the same value.
 
 \subsection {Coordinator} 
 
-The coordinator is a Paxos-replicated event-driven server that handles assignment of tasks to individual clients. The replication ensures that the system continues as long as a majority of the replicas are capable of communicating. Clients query the coordinator for the latest ``View'' of task assignments and notify the coordinator when tasks are completed. This view includes a mapping of task IDs to clients and the parameters for each task ID (which include task name, a random seed, and a list of pre-requisite tasks that provide additional input). 
+The coordinator is a Paxos-replicated, event-driven state-machine that responds to clients' requests for the current task schedule. The replication ensures that the system continues as long as a majority of the replicas are capable of communicating. 
 
-When a client hasn't queried the coordinator during a certain period of time, the coordinator marks the client as dead and reassigns its tasks. A single replica known as the ``leader'' periodically inserts ``TICK'' operations into the Paxos log to ensure that the replicas agree exactly when clients died in relation to other operations. New leaders are periodically elected via Paxos to handle leader failure. 
+Clients query the coordinator for the latest ``view'', the task schedule, and notify the coordinator when tasks are completed by nodes. A view includes a mapping of tasks to clients in addition to the parameters for each task as defined by the user's scheduler. Parameters include task name, task arguments, and task dependencies. 
 
-Our coordinator communicates events to a developer-provided event handler. This handler receives notifications of finished tasks along with short pieces of output data (requested when the task started) and can then tell the coordinator to start new tasks, kill existing tasks, or end the computation. These event handlers are very simple and easy to implement while providing developers a large amount of flexibility for their computations. For instance, the genetic algorithm handler is able to group similar solutions for crossover and the Bitcoin mining handler is able to kill tasks to free resources when solutions are found. 
+The coordinator monitors the liveliness of a clients. When a client hasn't queried the coordinator for a certain period of time, the coordinator marks the client as dead and reassigns its tasks. A single replica known as the ``leader'' periodically inserts ``TICK'' operations into the Paxos log to ensure that all replicas exactly agree on when clients died in relation to other operations. New leaders are periodically elected via Paxos to handle leader failure.
+
+The coordinator communicates events to the user's scheduler. In response to events, the scheduler can start new tasks, kill existing tasks, or end the computation. These event handlers are very simple and easy to implement while providing developers a large amount of flexibility for their computations. For instance, a genetic algorithm scheduler is able to group similar solutions for crossover and a Bitcoin mining scheduler is able to kill tasks to free resources when solutions are found.
 
 \subsection {Client} 
 
