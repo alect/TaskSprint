@@ -263,6 +263,49 @@ st string, program string) []*Client {
   return clients
 }
 
+func CreateMapReduceCoords(nservers, numTaskReplicas int, seed int64,
+st string, name string) ([]*coordinator.Coordinator,
+[]string, []*coordinator.AllCoordinator) {
+  runtime.GOMAXPROCS(8)
+
+  var coa []*coordinator.Coordinator = 
+  make([]*coordinator.Coordinator, nservers)
+  var kvh []string = make([]string, nservers)
+  var sca []*coordinator.AllCoordinator =
+  make([]*coordinator.AllCoordinator, nservers)
+
+  for i := 0; i < nservers; i++ {
+    sca[i] = coordinator.MakeAllCoordinator(
+      "./../../../examples/mapreduce/mrfiles/" + name + ".py");
+  }
+  for i := 0; i < nservers; i++ {
+    kvh[i] = port("basic", i, st)
+  }
+  for i := 0; i < nservers; i++ {
+    coa[i] = coordinator.StartServer(kvh, i, sca[i], numTaskReplicas,
+    seed, st)
+  }
+
+  return coa, kvh, sca
+}
+
+func CreateMapReduceClients(numClient int, kvh []string,
+st string, program string) []*Client {
+  clients := make([]*Client, numClient)
+  for i := 0; i < numClient; i++ {
+    options := &Options{
+      kvh,
+      port("clientsocket", i, st),
+      st,
+      "./../../../examples/mapreduce/mrfiles/" + program + ".py",
+    }
+    clients[i] = Init(options)
+  }
+
+  return clients
+}
+
+
 func TestSimple(t *testing.T) {
 	fmt.Printf("Test: Single Client\n")
 
@@ -618,3 +661,19 @@ func TestMonteCarlo(t *testing.T) {
   // Cleanup the coordinators
   cleanup(coa)
 }
+
+func TestMapReducePython(t *testing.T) {
+	fmt.Printf("Test: MapReduce Reverse Index\n")
+	
+	// Set up coordinators and clients
+	numTaskReplicas, nservers, numClient := 1, 3, 1
+	coa, kvh, sca := CreateMapReduceCoords(nservers, numTaskReplicas, 0, "tcp", "mrCoord")
+	clients := CreateMapReduceClients(numClient, kvh, "tcp", "mrReverseIndexNode")
+	
+	// Run the computation, timeout in 10 seconds
+  RunPythonCustom(clients, nservers, sca, 60, false, 22222)
+
+  // Cleanup the coordinators
+  cleanup(coa)
+}
+
