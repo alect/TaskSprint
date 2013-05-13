@@ -30,7 +30,7 @@ func main() {
 	} else if *developerCoord == "mapreduce" {
 		dc = coordinator.MakeMapReduceCoord(*M, *R, *input)
 	} else {
-		log.Fatal("dc parameter must be one of the following: test, mapreduce")
+		dc = coordinator.MakeAllCoordinator(*developerCoord)
 	}
 	co := coordinator.MakeServer(serverNames, *meIndex, dc, *numTaskReplicas, *seed, "tcp")
 	// Doesn't return until coordinator is dead. 

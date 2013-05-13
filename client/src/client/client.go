@@ -192,6 +192,7 @@ args map[coordinator.TaskID]coordinator.TaskParams) {
     if c.nodes[i].status == Free {
       newTask := &Task{tasks[t], c.nodes[i], Pending, args[tasks[t]], nil}
       c.tasks[tasks[t]] = newTask
+			c.nodes[i].status = Busy
       go c.runTask(newTask)
       t++
     }
@@ -230,7 +231,6 @@ func (c *Client) fetchParams(params *coordinator.TaskParams) string {
     if params.BaseObject == nil { params.BaseObject = [0]int{}}
     return c.getJson(params.FuncName, params.BaseObject)
   }
-
   prereqs, complete := len(params.PreReqTasks), 0
   fetched := make([]bool, prereqs)
   data := make([]interface{}, prereqs)
@@ -241,12 +241,12 @@ func (c *Client) fetchParams(params *coordinator.TaskParams) string {
       tid := params.PreReqTasks[t]
       finishedClients := c.currentView.Tasks[tid].FinishedClients
       for _, cid := range finishedClients {
-        /* fmt.Printf("Trying %d\n", cid) */
+        //fmt.Printf("Trying %d\n", cid)
         datum, ok := c.FetchData(cid, tid, params.PreReqKey[t])
         if !ok { continue }
         fetched[t], data[t] = true, datum
         complete++
-        /* fmt.Printf("Got %v\n", datum) */
+        //fmt.Printf("Got %v\n", datum)
       }
     }
     // Pause before retrying
@@ -284,12 +284,14 @@ func (c *Client) runTask(task *Task) {
   }
 
   // Waiting for result
-  buffer := make([]byte, 1024)
+
+	buffer := make([]byte, 1024)
   size, readerr := conn.Read(buffer)
   if readerr != nil && readerr != io.EOF {
     log.Fatal("Error reading result. ", readerr)
   }
   conn.Close()
+	
 
   // Unserializing and marking as finished
   result := make(map[string]interface{})
@@ -434,7 +436,7 @@ func (c *Client) Start() {
 func (c *Client) killNode(node *Node) {
   params := new (coordinator.TaskParams)
   params.FuncName = "kill"
-  params.BaseObject = "[]"
+  params.BaseObject = nil
   t := &Task{-1, node, Pending, *params, nil}
   c.runTask(t);
 }
