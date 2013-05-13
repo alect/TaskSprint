@@ -308,9 +308,6 @@ func (c *Client) markFinished(task *Task, result map[string]interface{}) {
 
   // Need to avoid a very slim, but possible, race
   c.viewMu.Lock()
-  defer c.viewMu.Unlock()
-
-  c.clerk.Done(task.id, outResult)
 
   node := task.node
   node.task = nil
@@ -319,6 +316,10 @@ func (c *Client) markFinished(task *Task, result map[string]interface{}) {
   task.data = result
   task.node = nil
   task.status = Finished
+
+  c.viewMu.Unlock()
+
+  c.clerk.Done(task.id, outResult)
 }
 
 func (c *Client) tick() bool {
@@ -392,8 +393,9 @@ func InitFlags() *Options {
 
   flag.Parse()
 
-  if *servers == "" || *socket == "" || *program == "" {
-    log.Fatal("usage: -servers ip:port[,ip:port...] -socket path -program path")
+  if *servers == "" || *socket == "" || *program == "" || *network == "" {
+    log.Fatal("usage: -servers ip:port[,ip:port...] " +
+      "-socket path -program path -network {unix, tcp}")
   }
 
   options.servers = strings.Split(*servers, ",")
