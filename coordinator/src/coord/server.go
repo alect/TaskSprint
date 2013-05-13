@@ -451,6 +451,7 @@ func StartServer(servers []string, me int, dc DeveloperCoord, numTaskReplicas in
 
 func MakeServer(servers []string, me int, dc DeveloperCoord, numTaskReplicas int, seed int64, socktype string) *Coordinator { 
 	gob.Register(Op{})
+	gob.Register(map[string]interface{}{})
 	gob.Register([]interface{}{})
 
 	co := new(Coordinator)
