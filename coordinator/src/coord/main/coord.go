@@ -17,7 +17,7 @@ func main() {
 
 	flag.Parse()
 
-	if *servers == "" || *meIndex == 0 || *developerCoord == "" {
+	if *servers == "" || *developerCoord == "" {
 		log.Fatal("usage: -servers ip:port[,ip:port] -me int -n int -seed int64 -dc coord")
 	}
 
