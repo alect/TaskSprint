@@ -110,5 +110,5 @@ class MRCoordinator(TaskSprintCoordinator):
                 except:
                     pass
             
-
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 MRCoordinator().start()

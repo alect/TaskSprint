@@ -285,25 +285,6 @@ func (c *Client) runTask(task *Task) {
 
   // Waiting for result
 
-	// HACK: putting this in temporarily so that the mapreduce examples can work 
-	// (results significantly larger than 1024)
-	/*
-	buffer := make([]byte, 0)
-	keepReading := true 
-	for keepReading {
-		tempBuffer := make([]byte, 1024)
-		tempSize, readerr := conn.Read(tempBuffer)
-		if readerr != nil && readerr != io.EOF {
-			log.Fatal("Error reading result. ", readerr)
-		}
-		keepReading = tempSize == 1024
-		for i := 0; i < tempSize; i++ { 
-			buffer = append(buffer, tempBuffer[i])
-		}
-	}
-	conn.Close()
-	size := len(buffer)
-  */
 	buffer := make([]byte, 1024)
   size, readerr := conn.Read(buffer)
   if readerr != nil && readerr != io.EOF {

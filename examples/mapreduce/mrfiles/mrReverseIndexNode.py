@@ -32,5 +32,5 @@ class ReverseIndex(MRNode):
         out = sorted(out, key=lambda pair: pair[0])
         return out[10:22]
         
-
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 ReverseIndex().start()

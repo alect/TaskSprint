@@ -67,6 +67,6 @@ class MRNode(TaskSprintNode):
     def Reduce(self, key, keyvalues):
         pass
 
-    # Override this funciton for different mapreduce programs
+    # Override this function for different mapreduce programs
     def Merge(self, results):
         pass
