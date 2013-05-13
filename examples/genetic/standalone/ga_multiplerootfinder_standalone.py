@@ -1,3 +1,6 @@
+import sys
+sys.path.append("../")
+
 from ga_multiplerootfinder_lib import *
 
 ################################################################################
@@ -18,7 +21,7 @@ params = {
             'resolution':   32,
 
             # Solution epsilon (float)
-            'epsilon':             0.0001,
+            'solution_epsilon':    0.0001,
             # Cluster epsilon (float)
             'cluster_epsilon':     0.20,
             # Crossover epsilon (float)
@@ -26,6 +29,8 @@ params = {
         },
 
         'ga_params': {
+            # Total number of evolutions (int)
+            'evolutions':   100,
             # New population size (int)
             'new_popsize':      200,
             # Minimum population size (int)
@@ -39,42 +44,37 @@ params = {
         },
 
         'run_params': {
-            # Number of Fresh GAs to Evolve (int)
-            'runtime':      20,
-            # Evolutions per GA
-            'evolutions':   100,
+            # Max number of GAs to execute total (int)
+            'runtime':      25,
         },
     }
 
 solutions = []
 
-params['f_params']['roots_found'] = []
+# Initialize known roots of the function to empty
+params['f_params']['solutions'] = []
 
 for attempt in range(params['run_params']['runtime']):
-    print "Root-find attempt %d..." % attempt
+    print "Root-find attempt %d..." % (attempt+1)
 
     population = []
 
     # Enter GA evolution loop
-    for generation in range(params['run_params']['evolutions']):
+    for generation in range(params['ga_params']['evolutions']):
         population = evolve(population, params)
 
         # If the best fitness makes the solution epsilon
-        if abs(population[-1][1]) < params['f_params']['epsilon']:
+        if abs(population[-1][1]) < params['f_params']['solution_epsilon']:
+            point, fitness = population[-1]
+
             # Check that this solution isn't close to other found solutions
             solution_found = True
             for s in solutions:
-                if point_distance(s[0], population[-1][0], params['f_params']) < params['f_params']['cluster_epsilon']:
+                if point_distance(s, point, params['f_params']) < params['f_params']['cluster_epsilon']:
                     solution_found = False
 
             if solution_found:
-                solutions.append( (population[-1][0], population[-1][1], generation) )
-                params['f_params']['roots_found'].append(population[-1][0])
-                print "\tFound a new solution!"
+                params['f_params']['solutions'].append(point)
+                print "\tFound root #%d on GA gen %d: x = %s / f(x) = %f" % (len(params['f_params']['solutions']), generation, str(point_fixed2float(point, params['f_params'])), fitness)
                 break
-
-print "\nFound %d solutions\n" % len(solutions)
-
-for s in solutions:
-    print "Point:\t\t%s\nFitness:\t%f\nGeneration:\t%d\n" % (str(point_fixed2float(s[0], params['f_params'])), s[1], s[2])
 

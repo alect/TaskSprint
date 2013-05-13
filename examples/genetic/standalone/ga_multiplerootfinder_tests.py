@@ -1,3 +1,6 @@
+import sys
+sys.path.append("../")
+
 import unittest
 from ga_multiplerootfinder_lib import *
 
@@ -65,7 +68,7 @@ class TestPoint(unittest.TestCase):
         f_params['argmin'] = -5.0
         f_params['resolution'] = 10
         f_params['function'] = lambda x: x[0]**2 + x[1]**2 + x[2]**2
-        f_params['roots_found'] = []
+        f_params['solutions'] = []
 
         e = 1.0 / (2**(f_params['resolution']/2))
 
