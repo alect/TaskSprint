@@ -26,7 +26,7 @@ class MultipleRootFinderCoordinator(TaskSprintCoordinator):
         # Initialize our GA finished counter
         self.num_finished = 0
 
-    def client_joined(self, cid, num_nodes):
+    def client_joined(self, cid):
         print "Client joined %d" % cid
 
     def client_dead(self, cid):
