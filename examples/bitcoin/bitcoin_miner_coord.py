@@ -12,7 +12,7 @@ from bitcoin_miner_lib import *
 
 class BitcoinMinerCoordinator(TaskSprintCoordinator):
     def init(self, seed):
-        # Initialize parameters
+        # Mining parameters
         self.curblock_template = None
         self.coinbase_message = bin2hex("Hello World from TaskSprint!")
         self.address = "15PKyTs3jJ3Nyf3i6R7D9tfGCY1ZbtqWdv"
@@ -22,14 +22,14 @@ class BitcoinMinerCoordinator(TaskSprintCoordinator):
         # Miner client list
         self.cid_miners = []
 
-        # Miner task list
+        # Miner task IDs
         self.tid_miners = []
-        # getblocktemplate task
+        # getblocktemplate task ID
         self.tid_bitcoind_getblocktemplate = self.start_task(name = "bitcoind_getblocktemplate", keys = ['block_template'])
-        # wait task
+        # wait task ID
         self.tid_bitcoind_wait = None
 
-    def client_joined(self, cid):
+    def client_joined(self, cid, num_nodes):
         # Add the miner to our client list
         self.cid_miners.append(cid)
         print "Client joined %d" % cid
@@ -40,15 +40,34 @@ class BitcoinMinerCoordinator(TaskSprintCoordinator):
             self.cid_miners.remove(cid)
             print "Client dead %d" % cid
 
+    def start_miners(self, num):
+        # Prepare another parameter set for a new miner
+        params = {
+            'block_template': self.curblock_template,
+            'coinbase_message': self.coinbase_message,
+            'extranonce_start': random.getrandbits(32),
+            'address': self.address,
+            'mine_timeout': self.mine_timeout,
+            'debugnonce_start': False
+        }
+
+        for i in range(num):
+            self.tid_miners.append( self.start_task(name = "mine", base = [json.dumps(params)], keys = ['mined_block', 'hps']) )
+
     def task_done(self, tid, values):
 
         # If the finished task is getblocktemplate
         if tid == self.tid_bitcoind_getblocktemplate:
-            print "got template"
+            # Copy out the new template
             self.curblock_template = json.loads(values['block_template'])
 
-            # FIXME: Stop current tasks
-            # FIXME: Start new tasks
+            # Stop tasks mining on old template
+            for t in self.tid_miners:
+                self.kill_task(tid = t)
+            self.tid_miners = []
+
+            # Start tasks mining on new template
+            self.start_miners(len(self.cid_miners))
 
             # Fire up a wait task
             self.tid_getblocktemplate = None
@@ -77,20 +96,8 @@ class BitcoinMinerCoordinator(TaskSprintCoordinator):
                 # Submit the block
                 self.start_task(name = "bitcoind_submit", base = [keys['mined_block']])
 
-            # Prepare another parameter set for a new miner
-            params = {
-                'block_template': self.curblock_template,
-                'coinbase_message': self.coinbase_message,
-                'extranonce_start': random.getrandbits(32),
-                'address': self.address,
-                'mine_timeout': self.mine_timeout,
-                'debugnonce_start': False
-            }
-
-            # Start so we have an equal number of miner and client tasks
-            for i in range(len(self.cid_miners) - len(self.tid_miners)):
-                self.tid_miners.append( self.start_task(name = "mine", base = [json.dumps(params)], keys = ['mined_block', 'hps']) )
-
+            # Start up a new miner task to replace this one
+            self.start_miners(1)
 
 BitcoinMinerCoordinator().start()
 
