@@ -7,7 +7,7 @@ type NodeID int64
 // The interface implemented by a developer coordinator 
 type DeveloperCoord interface { 
 	Init(co *Coordinator, seed int64)
-	ClientJoined(co *Coordinator, CID ClientID) 
+	ClientJoined(co *Coordinator, CID ClientID, NumNodes int) 
 	ClientDead(co *Coordinator,  CID ClientID) 
 	TaskDone(co *Coordinator, TID TaskID, DoneValues map[string]interface{})
 } 

@@ -13,7 +13,7 @@ func (sc *SimpleMultiCoord) Init(co *Coordinator, seed int64) {
 	sc.currentTask = co.StartTask(params)
 } 
 
-func (sc *SimpleMultiCoord) ClientJoined(co *Coordinator, CID ClientID) { 
+func (sc *SimpleMultiCoord) ClientJoined(co *Coordinator, CID ClientID, NumNodes int) { 
 	// Do nothing for now 
 } 
 

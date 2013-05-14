@@ -31,7 +31,7 @@ func (sc *PreReqCoord) Init(co *Coordinator, seed int64) {
   sc.goPy(co, "sum", nil, 2, subtasks, keys)
 }
 
-func (sc *PreReqCoord) ClientJoined(co *Coordinator, CID ClientID) {
+func (sc *PreReqCoord) ClientJoined(co *Coordinator, CID ClientID, NumNodes int) {
 	// Do nothing for now 
 }
 

@@ -157,7 +157,7 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 			co.availableClients[op.CID] = op.NumNodes
 			// Update our view of how to contact the client 
 			co.currentView.ClientInfo[op.CID] = op.Contact
-			co.dc.ClientJoined(co, op.CID)
+			co.dc.ClientJoined(co, op.CID, op.NumNodes)
 			// Increment our view
 			co.currentView.ViewNum++
 		}
@@ -451,6 +451,7 @@ func StartServer(servers []string, me int, dc DeveloperCoord, numTaskReplicas in
 
 func MakeServer(servers []string, me int, dc DeveloperCoord, numTaskReplicas int, seed int64, socktype string) *Coordinator { 
 	gob.Register(Op{})
+	gob.Register(map[string]interface{}{})
 	gob.Register([]interface{}{})
 
 	co := new(Coordinator)

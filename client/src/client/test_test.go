@@ -381,12 +381,12 @@ func TestMultipleQuitThenJoin(t *testing.T) {
   // Starting first batch of clients
   numClient := 4
   clients := CreateClients(numClient, kvh, "unix")
-  Run(clients, nservers, sca, 4, false)
+  Run(clients, nservers, sca, 5, false)
 
   // Start them again
   numClient = 4
   clients = CreateClients(numClient, kvh, "unix")
-  Run(clients, nservers, sca, 8, true)
+  Run(clients, nservers, sca, 10, true)
 
   // Cleanup coordinators
   cleanup(coa)
@@ -427,7 +427,7 @@ func TestOOSQuitThenJoin(t *testing.T) {
 }
 
 func TestMultipleOOSQuitThenJoin(t *testing.T) {
-	fmt.Printf("Test: Multiple Clients with Multiple OOS Join/Quit\n")
+  fmt.Printf("Test: Multiple Clients with Multiple OOS Join/Quit\n")
   numTaskReplicas, nservers := 1, 3;
   coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "unix")
 
@@ -437,6 +437,39 @@ func TestMultipleOOSQuitThenJoin(t *testing.T) {
   rounds := len(startSleep)
   for i := 0; i < rounds; i++ {
     clients := CreateClients(numClients[i], kvh, "unix")
+    for _, c := range clients {
+      time.Sleep(startSleep[i] * time.Millisecond)
+      go c.Start()
+    }
+
+    if i == rounds - 1 {
+      // Final round. Check for result
+      Poll(clients, nservers, sca, 10, 1279200, true)
+    }
+
+    for _, c := range clients {
+      c.Kill()
+      time.Sleep(killSleep[i] * time.Millisecond)
+    }
+
+    // Let it rest
+    time.Sleep(4 * time.Second)
+  }
+
+  cleanup(coa)
+}
+
+func TestMultipleOOSQuitThenJoinTCP(t *testing.T) {
+  fmt.Printf("Test: Multiple Clients with Multiple OOS Join/Quit: TCP\n")
+  numTaskReplicas, nservers := 1, 3;
+  coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "tcp")
+
+  startSleep := []time.Duration{250, 500, 300, 250, 0}
+  killSleep := []time.Duration{500, 250, 800, 100, 0}
+  numClients := []int{2, 3, 4, 2, 3}
+  rounds := len(startSleep)
+  for i := 0; i < rounds; i++ {
+    clients := CreateClients(numClients[i], kvh, "tcp")
     for _, c := range clients {
       time.Sleep(startSleep[i] * time.Millisecond)
       go c.Start()
@@ -664,14 +697,15 @@ func TestMonteCarlo(t *testing.T) {
 
 
 func TestMapReducePython(t *testing.T) {
-	fmt.Printf("Test: MapReduce Reverse Index\n")
-	
-	// Set up coordinators and clients
-	numTaskReplicas, nservers, numClient := 1, 3, 1
-	coa, kvh, sca := CreateMapReduceCoords(nservers, numTaskReplicas, 0, "tcp", "mrCoord")
-	clients := CreateMapReduceClients(numClient, kvh, "tcp", "mrReverseIndexNode")
-	
-	// Run the computation, timeout in 10 seconds
+  fmt.Printf("Test: MapReduce Reverse Index\n")
+
+  // Set up coordinators and clients
+  numTaskReplicas, nservers, numClient := 1, 3, 1
+  coa, kvh, sca := CreateMapReduceCoords(nservers, numTaskReplicas, 0,
+    "tcp", "mrCoord")
+  clients := CreateMapReduceClients(numClient, kvh, "tcp", "mrReverseIndexNode")
+
+  // Run the computation, timeout in 10 seconds
   RunPythonCustom(clients, nservers, sca, 60, false, 22222)
 
   // Cleanup the coordinators

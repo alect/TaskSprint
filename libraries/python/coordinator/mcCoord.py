@@ -12,7 +12,7 @@ class MonteCarloCoordinator(TaskSprintCoordinator):
       keys = ["result"]
     )
 
-  def client_joined(self, cid):
+  def client_joined(self, cid, num_nodes):
     print "Somebody joined! %d" %cid
 
   def client_dead(self, cid):

@@ -53,7 +53,7 @@ func (mr *MapReduceCoord) Init(co *Coordinator, seed int64) {
  	mr.mergeOutputTask = co.StartTask(finalParams)
 } 
 
-func (mr *MapReduceCoord) ClientJoined(co *Coordinator, CID ClientID) {
+func (mr *MapReduceCoord) ClientJoined(co *Coordinator, CID ClientID, NumNodes int) {
  	// Do nothing */
 }
 

@@ -23,7 +23,7 @@ import "encoding/gob"
 type Options struct {
   servers []string
   socket string
-	socktype string
+  socktype string
   program string
 }
 
@@ -249,6 +249,7 @@ func (c *Client) fetchParams(params *coordinator.TaskParams) string {
         //fmt.Printf("Got %v\n", datum)
       }
     }
+
     // Pause before retrying
     time.Sleep(250 * time.Millisecond)
   }
@@ -310,9 +311,6 @@ func (c *Client) markFinished(task *Task, result map[string]interface{}) {
 
   // Need to avoid a very slim, but possible, race
   c.viewMu.Lock()
-  defer c.viewMu.Unlock()
-
-  c.clerk.Done(task.id, outResult)
 
   node := task.node
   node.task = nil
@@ -321,6 +319,10 @@ func (c *Client) markFinished(task *Task, result map[string]interface{}) {
   task.data = result
   task.node = nil
   task.status = Finished
+
+  c.viewMu.Unlock()
+
+  if !c.dead { c.clerk.Done(task.id, outResult) }
 }
 
 func (c *Client) tick() bool {
@@ -394,8 +396,9 @@ func InitFlags() *Options {
 
   flag.Parse()
 
-  if *servers == "" || *socket == "" || *program == "" {
-    log.Fatal("usage: -servers ip:port[,ip:port...] -socket path -program path")
+  if *servers == "" || *socket == "" || *program == "" || *network == "" {
+    log.Fatal("usage: -servers ip:port[,ip:port...] " +
+      "-socket path -program path -network {unix, tcp}")
   }
 
   options.servers = strings.Split(*servers, ",")
@@ -434,7 +437,6 @@ func (c *Client) Start() {
 func (c *Client) killNode(node *Node) {
   params := new (coordinator.TaskParams)
   params.FuncName = "kill"
-  params.BaseObject = nil
   t := &Task{-1, node, Pending, *params, nil}
   c.runTask(t);
 }

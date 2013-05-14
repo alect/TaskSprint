@@ -192,8 +192,8 @@ tid TaskID, values map[string]interface{}) {
   ac.trigger("task_done", []interface{}{int64(tid), values})
 }
 
-func (ac *AllCoordinator) ClientJoined(co *Coordinator, cid ClientID) {
-  ac.trigger("client_joined", []int64{int64(cid)})
+func (ac *AllCoordinator) ClientJoined(co *Coordinator, cid ClientID, NumNodes int) {
+  ac.trigger("client_joined", []interface{}{int64(cid), NumNodes})
 }
 
 func (ac *AllCoordinator) ClientDead(co *Coordinator, cid ClientID) {

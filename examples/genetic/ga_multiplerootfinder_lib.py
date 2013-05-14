@@ -2,6 +2,10 @@ import random
 import math
 import bisect
 import sys
+<<<<<<< HEAD
+=======
+import types
+>>>>>>> 982d84db82aec40a683bc330b229e17d197acb6c
 
 ################################################################################
 # Fixed Width <-> Float Conversion Functions
@@ -52,10 +56,21 @@ def point_distance(p1, p2, f_params):
 # Returns (float) fitness
 def point_fitness(point, f_params):
     # Calculate fitness as -abs(f(x))
+<<<<<<< HEAD
     fitness = -1.0*abs(f_params['function'](point_fixed2float(point, f_params)))
 
     # Set fitness large if close to known roots
     for r in f_params['roots_found']:
+=======
+    func = f_params['function']
+    if  isinstance(f_params['function'], types.StringType) or \
+        isinstance(f_params['function'], types.UnicodeType):
+        func = eval(func)
+    fitness = -1.0*abs(func(point_fixed2float(point, f_params)))
+
+    # Set fitness large if close to known roots
+    for r in f_params['solutions']:
+>>>>>>> 982d84db82aec40a683bc330b229e17d197acb6c
         if point_distance(point, r, f_params) < f_params['cluster_epsilon']:
             fitness = -1.0*(2**32)
             break

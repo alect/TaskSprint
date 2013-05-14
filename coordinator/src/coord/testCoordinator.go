@@ -25,7 +25,7 @@ func (sc *TestCoord) Init(co *Coordinator, seed int64) {
   }
 }
 
-func (sc *TestCoord) ClientJoined(co *Coordinator, CID ClientID) {
+func (sc *TestCoord) ClientJoined(co *Coordinator, CID ClientID, NumNodes int) {
 	// Do nothing for now 
 }
 

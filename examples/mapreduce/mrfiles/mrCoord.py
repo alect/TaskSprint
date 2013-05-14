@@ -57,7 +57,7 @@ class MRCoordinator(TaskSprintCoordinator):
         for i in xrange(R):
             self.reduceTasks.append(self.start_task(
                 name='doReduce',
-                prekeys=['reduce-%s' % i for m in range(len(self.mapTasks))],
+                prekeys=['reduce-%s' % i for m in xrange(len(self.mapTasks))],
                 base=[i],
                 pretasks=self.mapTasks[:],
                 keys=['output']
@@ -69,7 +69,7 @@ class MRCoordinator(TaskSprintCoordinator):
             keys=['output']
         )
 
-    def client_joined(self, cid):
+    def client_joined(self, cid, num_nodes):
         pass
 
     def client_dead(self, cid):
