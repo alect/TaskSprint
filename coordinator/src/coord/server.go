@@ -194,8 +194,9 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 				if co.isFinished && len(co.availableClients) == 0 {
 					co.Kill()
 				}
+			} else {
+				co.lastQueries[clientID]++
 			}
-			co.lastQueries[clientID]++
 		}
 		co.AllocateTasks()
 	} else if op.Op == LEADER_CHANGE {
