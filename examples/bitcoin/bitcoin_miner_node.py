@@ -14,12 +14,13 @@ from bitcoin_miner_lib import *
 class BitcoinMinerNode(TaskSprintNode):
     def mine(self, *params):
         params = json.loads(params[0])
+
         mined_block, hps = block_mine(params['block_template'], params['coinbase_message'], params['extranonce_start'], params['address'], timeout=params['mine_timeout'], debugnonce_start=params['debugnonce_start'])
+
         return {'mined_block': json.dumps(mined_block), 'hps': hps}
 
     def bitcoind_getblocktemplate(self):
         block_template = rpc_getblocktemplate()
-        print "sending", len(json.dumps(block_template))
         return {'block_template': json.dumps(block_template)}
 
     def bitcoind_wait(self, *params):
