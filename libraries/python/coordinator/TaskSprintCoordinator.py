@@ -27,10 +27,10 @@ class TaskSprintCoordinator:
     self.coord_socket.close()
     return jsonify.decode(result)["tid"]
 
-	def kill_task(self, **params):
-		self.connect_to_coord()
-		self.coord_socket.send("kill_task:" + jsonify.encode(params))
-		self.coord_socket.close()
+  def kill_task(self, **params):
+    self.connect_to_coord()
+    self.coord_socket.send("kill_task:" + jsonify.encode(params))
+    self.coord_socket.close()
 
   def finish(self, **params):
     self.connect_to_coord()
