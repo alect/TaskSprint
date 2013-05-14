@@ -712,3 +712,29 @@ func TestMapReducePython(t *testing.T) {
   cleanup(coa)
 }
 
+
+func TestTaskReplication(t *testing.T) {
+	fmt.Printf("Test: Task Replication with leaving clients\n")
+	numTaskReplicas, nservers := 2, 3
+	coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "unix")
+	
+	clients_1 := CreateClients(2, kvh, "unix")
+	clients_2 := CreateClients(2, kvh, "unix")
+	
+	for _, c := range clients_1 {
+		go c.Start()
+	}
+	for _, c := range clients_2 {
+		go c.Start()
+	}
+
+	Poll(clients_1, nservers, sca, 5, 1279200, false)
+	
+	for _, c := range clients_1 {
+		c.Kill()
+	}
+
+	Poll(clients_2, nservers, sca, 20, 1279200, true)
+	
+	cleanup(coa)
+}
