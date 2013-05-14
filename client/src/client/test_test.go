@@ -755,21 +755,21 @@ func TestMapReducePython(t *testing.T) {
 }
 
 // Uncomment this if you include your s3 credentials in private.py
-/* func TestMapReduceS3(t *testing.T) { */
-/*   fmt.Printf("Test: MapReduce Reverse Index on S3\n") */
+func TestMapReduceS3(t *testing.T) {
+  fmt.Printf("Test: MapReduce Reverse Index on S3\n")
 
-/*   // Set up coordinators and clients */
-/*   numTaskReplicas, nservers, numClient := 1, 1, 1 */
-/*   coa, kvh, sca := CreateMapReduceS3Coords(nservers, numTaskReplicas, 0, */
-/*     "tcp", "mrCoord") */
-/*   clients := CreateMapReduceS3Clients(numClient, kvh, "tcp", "mrReverseIndexNode") */
+  // Set up coordinators and clients
+  numTaskReplicas, nservers, numClient := 1, 1, 1
+  coa, kvh, sca := CreateMapReduceS3Coords(nservers, numTaskReplicas, 0,
+    "tcp", "mrCoord")
+  clients := CreateMapReduceS3Clients(numClient, kvh, "tcp", "mrReverseIndexNode")
 
-/*   // Run the computation, timeout in 10 seconds */
-/*   RunPythonCustom(clients, nservers, sca, 60, false, 22222) */
+  // Run the computation, timeout in 10 seconds
+  RunPythonCustom(clients, nservers, sca, 60, false, 22222)
 
-/*   // Cleanup the coordinators */
-/*   cleanup(coa) */
-/* } */
+  // Cleanup the coordinators
+  cleanup(coa)
+}
 
 /* func TestTaskReplication(t *testing.T) { */
 /* 	fmt.Printf("Test: Task Replication with leaving clients\n") */
