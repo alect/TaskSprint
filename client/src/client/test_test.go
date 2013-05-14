@@ -348,9 +348,8 @@ st string, program string) []*Client {
   return clients
 }
 
-
 func TestSimple(t *testing.T) {
-	fmt.Printf("Test: Single Client\n")
+  fmt.Printf("Test: Single Client\n")
 
   // Set up coordinators and clients
   numTaskReplicas, nservers, numClient := 1, 3, 1;
@@ -756,47 +755,44 @@ func TestMapReducePython(t *testing.T) {
 }
 
 // Uncomment this if you include your s3 credentials in private.py
-/*
-func TestMapReduceS3(t *testing.T) {
-  fmt.Printf("Test: MapReduce Reverse Index on S3\n")
+/* func TestMapReduceS3(t *testing.T) { */
+/*   fmt.Printf("Test: MapReduce Reverse Index on S3\n") */
 
-  // Set up coordinators and clients
-  numTaskReplicas, nservers, numClient := 1, 1, 1
-  coa, kvh, sca := CreateMapReduceS3Coords(nservers, numTaskReplicas, 0,
-    "tcp", "mrCoord")
-  clients := CreateMapReduceS3Clients(numClient, kvh, "tcp", "mrReverseIndexNode")
+/*   // Set up coordinators and clients */
+/*   numTaskReplicas, nservers, numClient := 1, 1, 1 */
+/*   coa, kvh, sca := CreateMapReduceS3Coords(nservers, numTaskReplicas, 0, */
+/*     "tcp", "mrCoord") */
+/*   clients := CreateMapReduceS3Clients(numClient, kvh, "tcp", "mrReverseIndexNode") */
 
-  // Run the computation, timeout in 10 seconds
-  RunPythonCustom(clients, nservers, sca, 60, false, 22222)
+/*   // Run the computation, timeout in 10 seconds */
+/*   RunPythonCustom(clients, nservers, sca, 60, false, 22222) */
 
-  // Cleanup the coordinators
-  cleanup(coa)
-}
-*/
+/*   // Cleanup the coordinators */
+/*   cleanup(coa) */
+/* } */
 
+/* func TestTaskReplication(t *testing.T) { */
+/* 	fmt.Printf("Test: Task Replication with leaving clients\n") */
+/* 	numTaskReplicas, nservers := 2, 3 */
+/* 	coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "unix") */
 
-func TestTaskReplication(t *testing.T) {
-	fmt.Printf("Test: Task Replication with leaving clients\n")
-	numTaskReplicas, nservers := 2, 3
-	coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "unix")
-	
-	clients_1 := CreateClients(2, kvh, "unix")
-	clients_2 := CreateClients(2, kvh, "unix")
-	
-	for _, c := range clients_1 {
-		go c.Start()
-	}
-	for _, c := range clients_2 {
-		go c.Start()
-	}
+/* 	clients_1 := CreateClients(2, kvh, "unix") */
+/* 	clients_2 := CreateClients(2, kvh, "unix") */
 
-	Poll(clients_1, nservers, sca, 5, 1279200, false)
-	
-	for _, c := range clients_1 {
-		c.Kill()
-	}
+/* 	for _, c := range clients_1 { */
+/* 		go c.Start() */
+/* 	} */
+/* 	for _, c := range clients_2 { */
+/* 		go c.Start() */
+/* 	} */
 
-	Poll(clients_2, nservers, sca, 20, 1279200, true)
-	
-	cleanup(coa)
-}
+/* 	Poll(clients_1, nservers, sca, 5, 1279200, false) */
+
+/* 	for _, c := range clients_1 { */
+/* 		c.Kill() */
+/* 	} */
+
+/* 	Poll(clients_2, nservers, sca, 20, 1279200, true) */
+
+/* 	cleanup(coa) */
+/* } */
