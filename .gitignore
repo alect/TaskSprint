@@ -105,3 +105,6 @@ nosetests.xml
 
 # MapReduce I/O
 *kjv12.txt
+
+# Private module
+*private.py

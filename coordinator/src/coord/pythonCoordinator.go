@@ -152,7 +152,7 @@ func (ac *AllCoordinator) trigger(task string, data interface{}) {
 
   // Trying to connect to python
   conn, err := net.Dial("unix", ac.devSocket)
-  for tries := 0; tries < 20 && err != nil; tries++ {
+  for tries := 0; tries < 30 && err != nil; tries++ {
     time.Sleep(250 * time.Millisecond)
     conn, err = net.Dial("unix", ac.devSocket)
   }
