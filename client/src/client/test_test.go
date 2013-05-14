@@ -348,7 +348,7 @@ st string, program string) []*Client {
   return clients
 }
 
-/*
+
 func TestSimple(t *testing.T) {
 	fmt.Printf("Test: Single Client\n")
 
@@ -737,7 +737,7 @@ func TestMonteCarlo(t *testing.T) {
   // Cleanup the coordinators
   cleanup(coa)
 }
-*/
+
 
 func TestMapReducePython(t *testing.T) {
   fmt.Printf("Test: MapReduce Reverse Index\n")
