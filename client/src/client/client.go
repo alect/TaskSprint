@@ -339,6 +339,11 @@ func (c *Client) startServer(socket string) {
 	gob.Register(map[string]interface{}{})
 
   if (c.options.socktype == "unix") { os.Remove(socket) }
+  if (c.options.socktype == "tcp") {
+    sepIndex := strings.Index(socket, ":")
+    port := socket[sepIndex :]
+    socket = "0.0.0.0" + port;
+  }
   l, e := net.Listen(c.options.socktype, socket);
   if e != nil {
     log.Fatal("listen error: ", e);
