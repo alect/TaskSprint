@@ -1,3 +1,6 @@
+import sys
+sys.path.append("../")
+
 from bitcoin_miner_lib import *
 
 ################################################################################
@@ -7,8 +10,8 @@ from bitcoin_miner_lib import *
 def standalone_miner(coinbase_message, address):
     while True:
         print "Mining new block template..."
-        mined_block, hps = block_mine(rpc_getblocktemplate(), coinbase_message, 0, address, 15)
-        print "Average Hashes Per Second:", hps
+        mined_block, hps = block_mine(rpc_getblocktemplate(), coinbase_message, 0, address, timeout=10)
+        print "\tAverage Hashes Per Second:", hps
 
         if mined_block != None:
             print "Solved a block! Block hash:", mined_block['hash']

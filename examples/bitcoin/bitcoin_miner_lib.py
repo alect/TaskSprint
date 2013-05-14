@@ -300,13 +300,14 @@ def block_make_submit(block):
 #       coinbase_message:   (string) binary string for coinbase script
 #       extranonce_start:   (int) extranonce for coinbase script
 #       address:            (string) base58 reward bitcoin address
-#       timeout:            (int) timeout in seconds to give up mining
 #
+# Optional Arguments:
+#       timeout:            (False / int) timeout in seconds to give up mining
 #       debugnonce_start:   (False / int) nonce start for testing purposes
 #
 # Returns tuple of (solved block, hashes per second) on finding a solution,
 # or (None, hashes per second) on timeout or nonce exhaustion.
-def block_mine(block_template, coinbase_message, extranonce_start, address, timeout, debugnonce_start=False):
+def block_mine(block_template, coinbase_message, extranonce_start, address, timeout=False, debugnonce_start=False):
     # Add an empty coinbase transaction to the block template
     coinbase_tx = {}
     block_template['transactions'].insert(0, coinbase_tx)
@@ -362,7 +363,7 @@ def block_mine(block_template, coinbase_message, extranonce_start, address, time
                 time_stamp = time.clock()
 
                 # If our mine time expired, return none
-                if (time_stamp - time_start) > timeout:
+                if timeout != False and (time_stamp - time_start) > timeout:
                     hps_average = 0 if len(hps_list) == 0 else sum(hps_list)/len(hps_list)
                     return (None, hps_average)
 

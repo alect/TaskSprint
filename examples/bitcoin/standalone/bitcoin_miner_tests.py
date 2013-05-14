@@ -1,3 +1,6 @@
+import sys
+sys.path.append("../")
+
 from bitcoin_miner_lib import *
 import unittest
 
@@ -140,7 +143,7 @@ class TestBlock(unittest.TestCase):
         block['hash' ] = ""
 
         # Mine
-        (mined_block, hps) = block_mine(block, coinbase_message, extra_nonce_start, address, 60, debugnonce_start=2315460000)
+        (mined_block, hps) = block_mine(block, coinbase_message, extra_nonce_start, address, timeout=60, debugnonce_start=2315460000)
 
         # Test vector is actual block hash
         test_vector = "000000000000000a369033d52a4aa264844b50857f0c6104c555d53938e9c8d7"
