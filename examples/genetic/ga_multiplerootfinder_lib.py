@@ -4,11 +4,11 @@ import bisect
 import sys
 import types
 
-import numpy
+################################################################################
+# Dynamic Fixed Width <-> Float Value Conversion Functions
+################################################################################
 
-################################################################################
-# Fixed Width <-> Float Value Conversion Functions
-################################################################################
+import numpy
 
 # Dynamic float cast depending on the resolution specified in f_params
 def float_cast(f_params, *args):
@@ -16,25 +16,54 @@ def float_cast(f_params, *args):
     if f_params['resolution'] <= 32: FloatCast = float
     else: FloatCast = numpy.float64
 
-    if len(args) == 1:
-        return FloatCast(args[0])
-
+    if len(args) == 1: return FloatCast(args[0])
     return [FloatCast(x) for x in args]
 
 # Fixed Width Value to Float on f_params
-def fixed2float(x, f_params):
+def fixed2float_dynamic(x, f_params):
     amax, amin, xf, r = float_cast(f_params, f_params['argmax'], f_params['argmin'], x, 2**f_params['resolution'] - 1)
     return (amax - amin)*(xf/r) + amin
 
 # Float to Fixed Width Value on f_params
-def float2fixed(x, f_params):
+def float2fixed_dynamic(x, f_params):
     amax, amin, xf, r = float_cast(f_params, f_params['argmax'], f_params['argmin'], x, 2**f_params['resolution'] - 1)
     return int( ((xf - amin) / (amax - amin)) * r )
 
 # Float Epsilon to Fixed Width Epsilon on f_params
-def epsilon_float2fixed(x, f_params):
+def epsilon_float2fixed_dynamic(x, f_params):
     amax, amin, xf, r = float_cast(f_params, f_params['argmax'], f_params['argmin'], x, 2**f_params['resolution'])
     return int( (x / (amax-amin)) * r )
+
+################################################################################
+# Faster Fixed Width <-> Float Value Conversion Functions
+################################################################################
+
+# Fixed Width Value to Float on f_params
+def fixed2float_pyfloat(x, f_params):
+    amax, amin, xf, r = float(f_params['argmax']), float(f_params['argmin']), float(x), float(2**f_params['resolution'] - 1)
+    return (amax - amin)*(xf/r) + amin
+
+# Float to Fixed Width Value on f_params
+def float2fixed_pyfloat(x, f_params):
+    amax, amin, xf, r = float(f_params['argmax']), float(f_params['argmin']), float(x), float(2**f_params['resolution'] - 1)
+    return int( ((xf - amin) / (amax - amin)) * r )
+
+# Float Epsilon to Fixed Width Epsilon on f_params
+def epsilon_float2fixed_pyfloat(x, f_params):
+    amax, amin, xf, r = float(f_params['argmax']), float(f_params['argmin']), float(x), float(2**f_params['resolution'])
+    return int( (x / (amax-amin)) * r )
+
+################################################################################
+# Choose our conversion Functions (Dynamic vs All Pyfloat)
+################################################################################
+
+#fixed2float = fixed2float_pyfloat
+#float2fixed = float2fixed_pyfloat
+#epsilon_float2fixed = epsilon_float2fixed_pyfloat
+
+fixed2float = fixed2float_dynamic
+float2fixed = float2fixed_dynamic
+epsilon_float2fixed = epsilon_float2fixed_dynamic
 
 ################################################################################
 # Point Float Utility Functions
@@ -57,10 +86,10 @@ def point_distance(p1, p2, f_params):
     p1 = point_fixed2float(p1, f_params)
     p2 = point_fixed2float(p2, f_params)
 
-    distance = float_cast(f_params, 0.0)
+    distance = type(p1[0])(0.0)
     for i in range(f_params['dimensions']):
         distance += (p1[i] - p2[i])**2
-    distance = float_cast(f_params, numpy.sqrt(distance))
+    distance = type(p1[0])(numpy.sqrt(distance))
 
     return distance
 
@@ -77,8 +106,8 @@ def point_fitness(point, f_params):
 
     # Set fitness large if close to known roots
     for r in f_params['solutions']:
-        if point_distance(point, r, f_params) < float_cast(f_params, f_params['cluster_epsilon']):
-            fitness = -1.0*float_cast(f_params, 2**f_params['resolution'])
+        if point_distance(point, r, f_params) < f_params['cluster_epsilon']:
+            fitness = -1.0*(2**f_params['resolution'])
             break
 
     return fitness
@@ -103,7 +132,7 @@ def point_generate(f_params):
 def point_crossover(p1, p2, f_params, prob_crossover):
     # If crossover occurs and the points are within crossover distance
     if random.random() < prob_crossover and \
-        point_distance(p1, p2, f_params) < float_cast(f_params, f_params['crossover_epsilon']):
+        point_distance(p1, p2, f_params) < f_params['crossover_epsilon']:
         # Average both points into one
         p3 = []
         for j in range(len(p1)):
