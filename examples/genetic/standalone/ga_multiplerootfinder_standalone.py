@@ -49,8 +49,6 @@ params = {
         },
     }
 
-solutions = []
-
 # Initialize known roots of the function to empty
 params['f_params']['solutions'] = []
 
@@ -69,7 +67,7 @@ for attempt in range(params['run_params']['runtime']):
 
             # Check that this solution isn't close to other found solutions
             solution_found = True
-            for s in solutions:
+            for s in params['f_params']['solutions']:
                 if point_distance(s, point, params['f_params']) < params['f_params']['cluster_epsilon']:
                     solution_found = False
 

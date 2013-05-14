@@ -168,17 +168,21 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 	} else if op.Op == DONE {
 		// Handle finished tasks 
 		_, alreadyFinished := co.finishedTasks[op.TID]
-		if !alreadyFinished { 
+		if !alreadyFinished {
 			co.finishedTasks[op.TID] = true
 			co.dc.TaskDone(co, op.TID, op.DoneValues)
 		}
+		// Check to see if this is even a living client
+		_, alive := co.activeTasks[op.CID]
 		// Check to see if this is an active task for this client 
-		_, active := co.activeTasks[op.CID][op.TID] 
-		if active {
-			co.currentView.FinishedTasks[op.TID] = append(co.currentView.FinishedTasks[op.TID], op.CID)
-			co.currentView.ViewNum++
-			delete(co.activeTasks[op.CID], op.TID)
-			co.availableClients[op.CID]++
+		if alive {
+			_, active := co.activeTasks[op.CID][op.TID] 
+			if active {
+				co.currentView.FinishedTasks[op.TID] = append(co.currentView.FinishedTasks[op.TID], op.CID)
+				co.currentView.ViewNum++
+				delete(co.activeTasks[op.CID], op.TID)
+				co.availableClients[op.CID]++
+			}
 		}
 		co.AllocateTasks()
 	} else if op.Op == TICK {
