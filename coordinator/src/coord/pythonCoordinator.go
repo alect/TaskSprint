@@ -37,6 +37,10 @@ type FinishParams struct {
   Values map[string]interface{} // only for testing!!
 }
 
+type KillTaskParams struct {
+	TID TaskID
+}
+
 func (ac *AllCoordinator) startServer() {
   os.Remove(ac.socket) // For now...
   l, e := net.Listen("unix", ac.socket);
@@ -78,7 +82,12 @@ func (ac *AllCoordinator) handleQuery(trigger, jsons string, conn net.Conn) {
     if parseerr != nil { log.Fatal("Error parsing JSON: ", parseerr) }
     tid := ac.startTask(args)
     fmt.Fprintf(conn, "{\"tid\" : %d }", tid)
-  } else if trigger == "finish" {
+  } else if trigger == "kill_task" {
+		args := &KillTaskParams{}
+		parseerr := json.Unmarshal([]byte(jsons), args)
+		if parseerr != nil { log.Fatal("Error parsing JSON: ", parseerr) }
+		ac.killTask(args)
+	} else if trigger == "finish" {
     args := &FinishParams{}
     parseerr := json.Unmarshal([]byte(jsons), args)
     if parseerr != nil { log.Fatal("Error parsin JSON: ", parseerr) }
@@ -103,6 +112,10 @@ func (ac *AllCoordinator) finish(args *FinishParams) {
 
   // FOR TESTING ONLY
   ac.result = args.Values["result"].(float64)
+}
+
+func (ac *AllCoordinator) killTask(args *KillTaskParams) {
+	ac.co.KillTask(args.TID)
 }
 
 func (ac *AllCoordinator) Result() float64 {
