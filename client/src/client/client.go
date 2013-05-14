@@ -108,11 +108,11 @@ func (c *Client) processView(view *coordinator.View) {
   defer c.viewMu.Unlock()
 
   c.currentView = *view;
-  //myTasksNew := c.ExtractTasksNew(view)
+  /* myTasksNew := c.ExtractTasksNew(view) */
   myTasks := c.ExtractTasks(view)
 
-  //fmt.Printf("New: %v\n", myTasksNew)
-  //fmt.Printf("Old: %v\n\n", myTasks)
+  /* fmt.Printf("New: %v\n", myTasksNew) */
+  /* fmt.Printf("Old: %v\n\n", myTasks) */
 
   newTasks, killedTasks := c.SplitTasks(myTasks)
   if len(killedTasks) > 0 { c.killTasks(killedTasks) }
@@ -192,7 +192,7 @@ args map[coordinator.TaskID]coordinator.TaskParams) {
     if c.nodes[i].status == Free {
       newTask := &Task{tasks[t], c.nodes[i], Pending, args[tasks[t]], nil}
       c.tasks[tasks[t]] = newTask
-			c.nodes[i].status = Busy
+      c.nodes[i].status = Busy
       go c.runTask(newTask)
       t++
     }
@@ -202,7 +202,7 @@ args map[coordinator.TaskID]coordinator.TaskParams) {
 func (c *Client) FetchData(cid coordinator.ClientID,
 tid coordinator.TaskID, key string) (interface{}, bool) {
   args := &GetDataArgs{key, tid}
-	var reply GetDataReply
+  var reply GetDataReply
   var ok bool
   if cid == c.id {
     c.GetData(args, &reply)
@@ -241,12 +241,12 @@ func (c *Client) fetchParams(params *coordinator.TaskParams) string {
       tid := params.PreReqTasks[t]
       finishedClients := c.currentView.Tasks[tid].FinishedClients
       for _, cid := range finishedClients {
-        //fmt.Printf("Trying %d\n", cid)
+        /* fmt.Printf("Trying %d\n", cid) */
         datum, ok := c.FetchData(cid, tid, params.PreReqKey[t])
         if !ok { continue }
         fetched[t], data[t] = true, datum
         complete++
-        //fmt.Printf("Got %v\n", datum)
+        /* fmt.Printf("Got %v\n", datum) */
       }
     }
 
@@ -285,14 +285,12 @@ func (c *Client) runTask(task *Task) {
   }
 
   // Waiting for result
-
-	buffer := make([]byte, 1024)
+  buffer := make([]byte, 1024)
   size, readerr := conn.Read(buffer)
   if readerr != nil && readerr != io.EOF {
     log.Fatal("Error reading result. ", readerr)
   }
   conn.Close()
-	
 
   // Unserializing and marking as finished
   result := make(map[string]interface{})
