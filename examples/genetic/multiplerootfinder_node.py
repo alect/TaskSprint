@@ -26,7 +26,7 @@ class MultipleRootFinderNode(TaskSprintNode):
             if abs(population[-1][1]) < params['f_params']['solution_epsilon']:
                 break
 
-        ## Return most fit member of our population
+        # Return most fit member of our population
         return {'best' : population[-1], 'generations': i+1}
 
 MultipleRootFinderNode().start()
