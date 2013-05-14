@@ -754,6 +754,7 @@ func TestMapReducePython(t *testing.T) {
   cleanup(coa)
 }
 
+
 // Uncomment this if you include your s3 credentials in private.py
 /* func TestMapReduceS3(t *testing.T) { */
 /*   fmt.Printf("Test: MapReduce Reverse Index on S3\n") */
