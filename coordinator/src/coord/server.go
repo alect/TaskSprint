@@ -176,6 +176,7 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 		_, alive := co.activeTasks[op.CID]
 		// Check to see if this is an active task for this client 
 		if alive {
+			co.lastQueries[op.CID] = 0
 			_, active := co.activeTasks[op.CID][op.TID] 
 			if active {
 				co.currentView.FinishedTasks[op.TID] = append(co.currentView.FinishedTasks[op.TID], op.CID)
@@ -201,10 +202,17 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 				if co.isFinished && len(co.availableClients) == 0 {
 					co.Kill()
 				}
+				// TEST: Make sure the client is actually dead 
+				_, stillAlive := co.lastQueries[clientID]
+				if stillAlive {
+					log.Fatal("Failed to properly kill client")
+				}
+
 			} else {
 				co.lastQueries[clientID]++
 			}
 		}
+
 		co.AllocateTasks()
 	} else if op.Op == LEADER_CHANGE {
 		// Handle a leader change 

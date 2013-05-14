@@ -1,7 +1,6 @@
 package coordinator 
 
 import "log"
-/* import "fmt" */
 
 type TestCoord struct {
 	currentTask TaskID
