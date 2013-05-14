@@ -187,6 +187,9 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 		co.AllocateTasks()
 	} else if op.Op == TICK {
 		// Handle ticks to see if Some clients should be considered dead
+		if op.LeaderNum < co.leaderNum {
+			return co.currentView
+		}
 		for clientID, ticks := range co.lastQueries {
 			if ticks+1 == DEAD_TICKS {
 				// Dead client event
