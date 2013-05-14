@@ -310,6 +310,11 @@ func (c *Client) markFinished(task *Task, result map[string]interface{}) {
   // Need to avoid a very slim, but possible, race
   c.viewMu.Lock()
 
+  if task.status == Killed {
+    c.viewMu.Unlock()
+    return
+  }
+
   node := task.node
   node.task = nil
   node.status = Free

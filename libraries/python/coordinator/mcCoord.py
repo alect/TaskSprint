@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python -u
 from TaskSprintCoordinator import *
 
 class MonteCarloCoordinator(TaskSprintCoordinator):
@@ -21,6 +21,11 @@ class MonteCarloCoordinator(TaskSprintCoordinator):
   def task_done(self, tid, values):
     if tid == self.final:
       self.finish(taskids = [tid], values = values)
-    print "Task %d is done. Result: %s" %(tid, values)
+
+    message = "Task %d is done. Result: %s" %(tid, values)
+    with open("result", "a") as f:
+      f.write(message)
+
+    print message
 
 MonteCarloCoordinator().start()
