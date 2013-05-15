@@ -287,7 +287,8 @@ func (co *Coordinator) tick() {
 	leaderNum := co.leaderNum
 	co.mu.Unlock()
 
-	if shouldInsertTick { 
+	if shouldInsertTick {
+		fmt.Printf("Coord inserting tick!\n")
 		tickOp := Op { Op: TICK, LeaderNum: leaderNum, LeaderID: leaderID }
 		co.PerformPaxos(tickOp)
 	} 
@@ -382,16 +383,20 @@ func (co *Coordinator) ClientDead(CID ClientID) {
 
 // When a client wants the latest view
 func (co *Coordinator) Query(args *QueryArgs, reply *QueryReply) error { 
+	fmt.Printf("Coord receiving query from %v\n", args.CID)
 	op := Op { Op: QUERY, CID: args.CID, Contact: args.Contact, NumNodes: args.NumNodes }
 	result := co.PerformPaxos(op)
 	reply.View = result
+	fmt.Printf("Coord returning query from %v\n", args.CID)
 	return nil 
 } 
 
 // When a client has finished a task 
-func (co *Coordinator) TaskDone(args *DoneArgs, reply *DoneReply) error { 
+func (co *Coordinator) TaskDone(args *DoneArgs, reply *DoneReply) error {
+	fmt.Printf("Coord receiving done from %v\n", args.CID)
 	op := Op { Op: DONE, CID: args.CID, TID: args.TID, DoneValues: args.DoneValues }
 	co.PerformPaxos(op)
+	fmt.Printf("Coord returning done from %v\n", args.CID)
 	return nil
 } 
 
