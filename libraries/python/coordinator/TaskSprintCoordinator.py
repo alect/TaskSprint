@@ -16,25 +16,29 @@ class TaskSprintCoordinator:
     self.socket.bind(self.socket_name)
     self.socket.listen(1)
     while True:
-      (clientsocket, address) = self.socket.accept()
-      self.recv(clientsocket, clientsocket.recv(4096))
+      (clientsocket, address), data, max_buf = self.socket.accept(), "", 1024
+      while True:
+        buf = clientsocket.recv(max_buf)
+        data += buf
+        if len(buf) < max_buf: break
+      self.recv(clientsocket, data)
       clientsocket.close()
 
   def start_task(self, **params):
     self.connect_to_coord()
-    self.coord_socket.send("start_task:" + jsonify.encode(params))
+    self.coord_socket.sendall("start_task:" + jsonify.encode(params))
     result = self.coord_socket.recv(256)
     self.coord_socket.close()
     return jsonify.decode(result)["tid"]
 
   def kill_task(self, **params):
     self.connect_to_coord()
-    self.coord_socket.send("kill_task:" + jsonify.encode(params))
+    self.coord_socket.sendall("kill_task:" + jsonify.encode(params))
     self.coord_socket.close()
 
   def finish(self, **params):
     self.connect_to_coord()
-    self.coord_socket.send("finish:" + jsonify.encode(params))
+    self.coord_socket.sendall("finish:" + jsonify.encode(params))
     self.coord_socket.close()
 
   def connect_to_coord(self):

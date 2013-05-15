@@ -3,9 +3,9 @@ package coordinator
 import "log"
 
 type PreReqCoord struct {
-	currentTask TaskID
-	seed int64
-	tasksFinished int
+  currentTask TaskID
+  seed int64
+  tasksFinished int
   results []int
   tasks map[TaskID]int
   numSubTasks int

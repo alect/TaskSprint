@@ -16,8 +16,12 @@ class TaskSprintNode:
     self.socket.bind(self.socket_name)
     self.socket.listen(1)
     while True:
-      (clientsocket, address) = self.socket.accept()
-      self.recv(clientsocket, clientsocket.recv(4096))
+      (clientsocket, address), data, max_buf = self.socket.accept(), "", 1024
+      while True:
+        buf = clientsocket.recv(max_buf)
+        data += buf
+        if len(buf) < max_buf: break
+      self.recv(clientsocket, data)
       clientsocket.close()
 
   def kill(self):
@@ -33,8 +37,8 @@ class TaskSprintNode:
   def recv(self, client, data):
     error, task, args = self.verify_data(data)
     if error != None:
-      return client.send(jsonify.encode(error))
-    client.send(jsonify.encode(getattr(self, task)(*args)))
+      return client.sendall(jsonify.encode(error))
+    client.sendall(jsonify.encode(getattr(self, task)(*args)))
 
   def verify_data(self, data):
     error, taskfunc = None, None

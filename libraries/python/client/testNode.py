@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python -u
 from test_library import Person # for testing only
 from TaskSprintNode import *
 

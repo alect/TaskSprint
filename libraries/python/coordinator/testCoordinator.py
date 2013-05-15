@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python -u
 from TaskSprintCoordinator import *
 
 class TestCoordinator(TaskSprintCoordinator):
