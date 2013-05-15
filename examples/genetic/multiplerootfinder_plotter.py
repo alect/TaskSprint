@@ -28,26 +28,36 @@ def plotter():
     yl = [func([x]) for x in xl]
 
     # Plot the function in black
+    pylab.figure(figsize = (12, 9))
     pylab.plot(xl, yl, color='black')
     pylab.xlabel('x')
     pylab.ylabel('y')
     pylab.title('Multiple Root Finder')
     pylab.grid(True)
+
+    # Adjust the x limits to be a little beyond min and max of arg
+    d = max(xl) - min(xl)
+    pylab.xlim(min(xl) - 0.05*d, max(xl) + 0.05*d)
     # Adjust the y limits to be a little beyond min and max of function
     d = max(yl) - min(yl)
-    pylab.ylim(min(yl) - 0.10*d, max(yl) + 0.10*d)
+    pylab.ylim(min(yl) - 0.05*d, max(yl) + 0.05*d)
     # Draw graph and toolbar
     pylab.draw()
     pylab.draw()
 
     while True:
-        # Grab a new point from the queue
-        p = pointQueue.get()
-        # Exit cleanly if user hit Ctrl-C
-        if p == "q": break
-        # Plot p, f(p) as a circle in red
-        pylab.plot([p], [func(p)], marker='o', color='red')
-        # Draw graph and toolbar
+        try:
+            p = pointQueue.get(True, 0.5)
+        except Queue.Empty:
+            p = None
+
+        if p != None:
+            # Exit cleanly if user hit Ctrl-C
+            if p == "q": break
+            # Plot p, f(p) as a circle in red
+            pylab.plot([p], [func(p)], marker='o', color='red')
+
+        # Redraw graph and toolbar
         pylab.draw()
         pylab.draw()
 
