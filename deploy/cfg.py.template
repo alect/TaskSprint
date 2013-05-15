@@ -1,0 +1,12 @@
+# EC2 configuration info
+access_key = "your_ec2_access_key_here"
+secret_key = "your_ec2_secret_key_here"
+instance_type = "t1.micro" # type of instances to start
+
+# ssh key to use for instances; this key must be in the deploy folder
+key_name = 'tasksprint' 
+security_groups = ['default'] # security groups to place instances in
+ami = "ami-811977e8" # ami to start up instances with
+
+port = ":9000" # some open port in one of the security groups
+user = "ubuntu" # user to log into instances with
