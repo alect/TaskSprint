@@ -62,7 +62,7 @@ def refresh_and_build(address):
 
 def link_library(path):
   split = string.split(path, "/")
-  return "ln -s libraries/python/%s deploy/%s" %(path, split[len(path) - 1])
+  return "ln -s libraries/python/%s deploy/%s" %(path, split[len(split) - 1])
 
 def setup(address, program_path, program_name):
   refresh_and_build(address)
