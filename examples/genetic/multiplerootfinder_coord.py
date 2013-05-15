@@ -65,7 +65,11 @@ class MultipleRootFinderCoordinator(TaskSprintCoordinator):
 
         # Otherwise, stop all GA tasks
         else:
-            self.finish(taskids = self.ga_tasks, values = {'result': 0})
+            for t in self.ga_tasks:
+                self.kill_task(tid = t)
+            self.ga_tasks = []
+
+            print "\nFound %d roots" % len(self.params['f_params']['solutions'])
 
 MultipleRootFinderCoordinator().start()
 

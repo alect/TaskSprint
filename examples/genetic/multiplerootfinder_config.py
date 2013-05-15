@@ -6,8 +6,8 @@ params = {
         # Input dimensions of function (int)
         'dimensions':   1,
         # Search solution space (float)
-        'argmin':       -24.0,
-        'argmax':       +24.0,
+        'argmin':       -20.0,
+        'argmax':       +20.0,
         # Resolution in bits (int)
         'resolution':   32,
 
@@ -21,7 +21,7 @@ params = {
 
     'ga_params': {
         # Total number of evolutions (int)
-        'evolutions':   100,
+        'evolutions':       150,
         # New population size (int)
         'new_popsize':      200,
         # Minimum population size (int)
@@ -36,8 +36,8 @@ params = {
 
     'run_params': {
         # Max number of GAs to execute total (int)
-        'runtime':      200,
+        'runtime':      100,
         # Max number of GAs at any given time (int)
-        'concurrent':   10,
+        'concurrent':   20,
     },
 }
