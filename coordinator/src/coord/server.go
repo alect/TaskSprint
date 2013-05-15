@@ -140,6 +140,7 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 	if (op.Op == NIL || seq <= co.currentSeq) {
 		return co.currentView
 	}
+	fmt.Printf("Applying Op: %v\n", op.Op)
 	oldViewNum := co.currentView.ViewNum
 	co.currentSeq = seq
 	// First, see if we need to initialize everything 
@@ -288,7 +289,6 @@ func (co *Coordinator) tick() {
 	co.mu.Unlock()
 
 	if shouldInsertTick {
-		fmt.Printf("Coord inserting tick!\n")
 		tickOp := Op { Op: TICK, LeaderNum: leaderNum, LeaderID: leaderID }
 		co.PerformPaxos(tickOp)
 	} 
