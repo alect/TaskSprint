@@ -451,9 +451,13 @@ func Init(o *Options) *Client {
 func (c *Client) Start() {
   go func() {
     for !c.dead {
-      if !c.tick() { // Sleep if nothing new
+      /*if !c.tick() { // Sleep if nothing new
         time.Sleep(100 * time.Millisecond)
-      }
+      }*/
+			// Trying out possible delays to stop overloading the coordinator
+			c.tick()
+			time.Sleep(300*time.Millisecond)
+
     }
   }()
 
