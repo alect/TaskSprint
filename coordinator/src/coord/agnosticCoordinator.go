@@ -62,12 +62,22 @@ func (ac *AllCoordinator) startServer() {
 
 func (ac *AllCoordinator) handleConnection(conn net.Conn) {
   // Waiting for result
-  buffer := make([]byte, 1024)
-  size, readerr := conn.Read(buffer)
-  if readerr != nil { log.Fatal("Error reading query: ", readerr) }
+  maxBytes := 1024
+  var readerr error = nil
+  buffer, size, totalSize := make([]byte, 0), maxBytes, 0
+  for readerr == nil && size == maxBytes {
+    tempBuffer := make([]byte, maxBytes)
+    size, readerr = conn.Read(tempBuffer)
+    buffer = append(buffer, tempBuffer[:size]...)
+    totalSize += size
+  }
+
+  if readerr != nil && readerr != io.EOF {
+    log.Fatal("Error reading query: ", readerr)
+  }
 
   // Unserializing and marking as finished
-  queryString := string(buffer[:size])
+  queryString := string(buffer[:totalSize])
   sepIndex := strings.Index(queryString, ":")
   trigger := queryString[:sepIndex]
   json := queryString[sepIndex + 1:]
@@ -171,7 +181,7 @@ func (ac *AllCoordinator) trigger(task string, data interface{}) {
   }
 
   // Unsuccessful; die
-  if err != nil { log.Fatal("Python is dead.", err) }
+  if err != nil { log.Fatal("Scheduler is dead.", err) }
 
   // Sending data 
   fmt.Fprintf(conn, dataString)

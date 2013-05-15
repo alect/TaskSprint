@@ -285,17 +285,25 @@ func (c *Client) runTask(task *Task) {
   }
 
   // Waiting for result
-  buffer := make([]byte, 1024)
-  size, readerr := conn.Read(buffer)
+  maxBytes := 1024
+  var readerr error = nil
+  buffer, size, totalSize := make([]byte, 0), maxBytes, 0
+  for readerr == nil && size == maxBytes {
+    tempBuffer := make([]byte, maxBytes)
+    size, readerr = conn.Read(tempBuffer)
+    buffer = append(buffer, tempBuffer[:size]...)
+    totalSize += size
+  }
+
+  conn.Close()
   if readerr != nil && readerr != io.EOF {
     log.Fatal("Error reading result. ", readerr)
   }
-  conn.Close()
 
   // Unserializing and marking as finished
   result := make(map[string]interface{})
-  if size > 0 {
-    parseerr := json.Unmarshal(buffer[:size], &result)
+  if totalSize > 0 {
+    parseerr := json.Unmarshal(buffer[:totalSize], &result)
     if parseerr != nil { log.Fatal("Error parsing result. ", parseerr) }
   }
   c.markFinished(task, result)

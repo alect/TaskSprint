@@ -348,191 +348,191 @@ st string, program string) []*Client {
   return clients
 }
 
-func TestSimple(t *testing.T) {
-  fmt.Printf("Test: Single Client\n")
+/* func TestSimple(t *testing.T) { */
+/*   fmt.Printf("Test: Single Client\n") */
 
-  // Set up coordinators and clients
-  numTaskReplicas, nservers, numClient := 1, 3, 1;
-  coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "unix")
-  clients := CreateClients(numClient, kvh, "unix")
+/*   // Set up coordinators and clients */
+/*   numTaskReplicas, nservers, numClient := 1, 3, 1; */
+/*   coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "unix") */
+/*   clients := CreateClients(numClient, kvh, "unix") */
 
-  // Run the computation, timeout in 15 seconds
-  Run(clients, nservers, sca, 15, true)
+/*   // Run the computation, timeout in 15 seconds */
+/*   Run(clients, nservers, sca, 15, true) */
 
-  // Cleanup the coordinators
-  cleanup(coa)
-}
+/*   // Cleanup the coordinators */
+/*   cleanup(coa) */
+/* } */
 
-func TestSimpleTCP(t *testing.T) {
-  fmt.Printf("Test: Single Client: TCP\n")
+/* func TestSimpleTCP(t *testing.T) { */
+/*   fmt.Printf("Test: Single Client: TCP\n") */
 
-  // Set up coordinators and clients
-  numTaskReplicas, nservers, numClient := 1, 3, 1;
-  coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "tcp")
-  clients := CreateClients(numClient, kvh, "tcp")
+/*   // Set up coordinators and clients */
+/*   numTaskReplicas, nservers, numClient := 1, 3, 1; */
+/*   coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "tcp") */
+/*   clients := CreateClients(numClient, kvh, "tcp") */
 
-  // Run the computation, timeout in 15 seconds
-  Run(clients, nservers, sca, 30, true)
+/*   // Run the computation, timeout in 15 seconds */
+/*   Run(clients, nservers, sca, 30, true) */
 
-  // Cleanup the coordinators
-  cleanup(coa)
-}
+/*   // Cleanup the coordinators */
+/*   cleanup(coa) */
+/* } */
 
-func TestMultipleSimple(t *testing.T) {
-	fmt.Printf("Test: Multiple Clients\n")
+/* func TestMultipleSimple(t *testing.T) { */
+/* 	fmt.Printf("Test: Multiple Clients\n") */
 
-  // Set up coordinators and clients
-  numTaskReplicas, nservers, numClient := 1, 3, 7;
-  coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "unix")
-  clients := CreateClients(numClient, kvh, "unix")
+/*   // Set up coordinators and clients */
+/*   numTaskReplicas, nservers, numClient := 1, 3, 7; */
+/*   coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "unix") */
+/*   clients := CreateClients(numClient, kvh, "unix") */
 
-  // Run the computation, timeout in 10 seconds
-  Run(clients, nservers, sca, 10, true)
+/*   // Run the computation, timeout in 10 seconds */
+/*   Run(clients, nservers, sca, 10, true) */
 
-  // Cleanup the coordinators
-  cleanup(coa)
-}
+/*   // Cleanup the coordinators */
+/*   cleanup(coa) */
+/* } */
 
-func TestMultipleSimpleWithDelay(t *testing.T) {
-	fmt.Printf("Test: Multiple Clients with Join Delay\n")
+/* func TestMultipleSimpleWithDelay(t *testing.T) { */
+/* 	fmt.Printf("Test: Multiple Clients with Join Delay\n") */
 
-  numTaskReplicas, nservers, numClient := 1, 3, 5;
-  coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "unix")
-  clients := CreateClients(numClient, kvh, "unix")
+/*   numTaskReplicas, nservers, numClient := 1, 3, 5; */
+/*   coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "unix") */
+/*   clients := CreateClients(numClient, kvh, "unix") */
 
-  for _, c := range clients {
-    go c.Start()
-    time.Sleep(2 * time.Second)
-  }
+/*   for _, c := range clients { */
+/*     go c.Start() */
+/*     time.Sleep(2 * time.Second) */
+/*   } */
 
-  Poll(clients, nservers, sca, 10, 1279200, true)
+/*   Poll(clients, nservers, sca, 10, 1279200, true) */
 
-  for _, c := range clients {
-    c.Kill()
-  }
+/*   for _, c := range clients { */
+/*     c.Kill() */
+/*   } */
 
-  cleanup(coa)
-}
+/*   cleanup(coa) */
+/* } */
 
-func TestMultipleQuitThenJoin(t *testing.T) {
-	fmt.Printf("Test: Multiple Clients with Sync Join/Quit\n")
+/* func TestMultipleQuitThenJoin(t *testing.T) { */
+/* 	fmt.Printf("Test: Multiple Clients with Sync Join/Quit\n") */
 
-  numTaskReplicas, nservers := 1, 3;
-  coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "unix")
+/*   numTaskReplicas, nservers := 1, 3; */
+/*   coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "unix") */
 
-  // Starting first batch of clients
-  numClient := 4
-  clients := CreateClients(numClient, kvh, "unix")
-  Run(clients, nservers, sca, 5, false)
+/*   // Starting first batch of clients */
+/*   numClient := 4 */
+/*   clients := CreateClients(numClient, kvh, "unix") */
+/*   Run(clients, nservers, sca, 5, false) */
 
-  // Start them again
-  numClient = 4
-  clients = CreateClients(numClient, kvh, "unix")
-  Run(clients, nservers, sca, 10, true)
+/*   // Start them again */
+/*   numClient = 4 */
+/*   clients = CreateClients(numClient, kvh, "unix") */
+/*   Run(clients, nservers, sca, 10, true) */
 
-  // Cleanup coordinators
-  cleanup(coa)
-}
+/*   // Cleanup coordinators */
+/*   cleanup(coa) */
+/* } */
 
-func TestOOSQuitThenJoin(t *testing.T) {
-	fmt.Printf("Test: Multiple Clients with Out Of Sync Join/Quit\n")
-  numTaskReplicas, nservers, numClient := 1, 3, 4;
-  coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "unix")
+/* func TestOOSQuitThenJoin(t *testing.T) { */
+/* 	fmt.Printf("Test: Multiple Clients with Out Of Sync Join/Quit\n") */
+/*   numTaskReplicas, nservers, numClient := 1, 3, 4; */
+/*   coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "unix") */
 
-  // First round
-  clients := CreateClients(numClient, kvh, "unix")
-  for _, c := range clients {
-    time.Sleep(time.Second)
-    go c.Start()
-  }
+/*   // First round */
+/*   clients := CreateClients(numClient, kvh, "unix") */
+/*   for _, c := range clients { */
+/*     time.Sleep(time.Second) */
+/*     go c.Start() */
+/*   } */
 
-  for _, c := range clients {
-    c.Kill()
-    time.Sleep(time.Second)
-  }
+/*   for _, c := range clients { */
+/*     c.Kill() */
+/*     time.Sleep(time.Second) */
+/*   } */
 
-  // Second round
-  clients = CreateClients(numClient, kvh, "unix")
-  for _, c := range clients {
-    time.Sleep(time.Second)
-    go c.Start()
-  }
+/*   // Second round */
+/*   clients = CreateClients(numClient, kvh, "unix") */
+/*   for _, c := range clients { */
+/*     time.Sleep(time.Second) */
+/*     go c.Start() */
+/*   } */
 
-  // Let them work for a bit, then they should be done
-  Poll(clients, nservers, sca, 5, 1279200, true)
+/*   // Let them work for a bit, then they should be done */
+/*   Poll(clients, nservers, sca, 5, 1279200, true) */
 
-  for _, c := range clients {
-    c.Kill()
-  }
+/*   for _, c := range clients { */
+/*     c.Kill() */
+/*   } */
 
-  cleanup(coa)
-}
+/*   cleanup(coa) */
+/* } */
 
-func TestMultipleOOSQuitThenJoin(t *testing.T) {
-  fmt.Printf("Test: Multiple Clients with Multiple OOS Join/Quit\n")
-  numTaskReplicas, nservers := 1, 3;
-  coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "unix")
+/* func TestMultipleOOSQuitThenJoin(t *testing.T) { */
+/*   fmt.Printf("Test: Multiple Clients with Multiple OOS Join/Quit\n") */
+/*   numTaskReplicas, nservers := 1, 3; */
+/*   coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "unix") */
 
-  startSleep := []time.Duration{250, 500, 300, 250, 0}
-  killSleep := []time.Duration{500, 250, 800, 100, 0}
-  numClients := []int{6, 4, 8, 2, 5}
-  rounds := len(startSleep)
-  for i := 0; i < rounds; i++ {
-    clients := CreateClients(numClients[i], kvh, "unix")
-    for _, c := range clients {
-      time.Sleep(startSleep[i] * time.Millisecond)
-      go c.Start()
-    }
+/*   startSleep := []time.Duration{250, 500, 300, 250, 0} */
+/*   killSleep := []time.Duration{500, 250, 800, 100, 0} */
+/*   numClients := []int{6, 4, 8, 2, 5} */
+/*   rounds := len(startSleep) */
+/*   for i := 0; i < rounds; i++ { */
+/*     clients := CreateClients(numClients[i], kvh, "unix") */
+/*     for _, c := range clients { */
+/*       time.Sleep(startSleep[i] * time.Millisecond) */
+/*       go c.Start() */
+/*     } */
 
-    if i == rounds - 1 {
-      // Final round. Check for result
-      Poll(clients, nservers, sca, 10, 1279200, true)
-    }
+/*     if i == rounds - 1 { */
+/*       // Final round. Check for result */
+/*       Poll(clients, nservers, sca, 10, 1279200, true) */
+/*     } */
 
-    for _, c := range clients {
-      c.Kill()
-      time.Sleep(killSleep[i] * time.Millisecond)
-    }
+/*     for _, c := range clients { */
+/*       c.Kill() */
+/*       time.Sleep(killSleep[i] * time.Millisecond) */
+/*     } */
 
-    // Let it rest
-    time.Sleep(4 * time.Second)
-  }
+/*     // Let it rest */
+/*     time.Sleep(4 * time.Second) */
+/*   } */
 
-  cleanup(coa)
-}
+/*   cleanup(coa) */
+/* } */
 
-func TestMultipleOOSQuitThenJoinTCP(t *testing.T) {
-  fmt.Printf("Test: Multiple Clients with Multiple OOS Join/Quit: TCP\n")
-  numTaskReplicas, nservers := 1, 3;
-  coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "tcp")
+/* func TestMultipleOOSQuitThenJoinTCP(t *testing.T) { */
+/*   fmt.Printf("Test: Multiple Clients with Multiple OOS Join/Quit: TCP\n") */
+/*   numTaskReplicas, nservers := 1, 3; */
+/*   coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "tcp") */
 
-  startSleep := []time.Duration{250, 500, 300, 250, 0}
-  killSleep := []time.Duration{500, 250, 800, 100, 0}
-  numClients := []int{2, 3, 4, 2, 3}
-  rounds := len(startSleep)
-  for i := 0; i < rounds; i++ {
-    clients := CreateClients(numClients[i], kvh, "tcp")
-    for _, c := range clients {
-      time.Sleep(startSleep[i] * time.Millisecond)
-      go c.Start()
-    }
+/*   startSleep := []time.Duration{250, 500, 300, 250, 0} */
+/*   killSleep := []time.Duration{500, 250, 800, 100, 0} */
+/*   numClients := []int{2, 3, 4, 2, 3} */
+/*   rounds := len(startSleep) */
+/*   for i := 0; i < rounds; i++ { */
+/*     clients := CreateClients(numClients[i], kvh, "tcp") */
+/*     for _, c := range clients { */
+/*       time.Sleep(startSleep[i] * time.Millisecond) */
+/*       go c.Start() */
+/*     } */
 
-    if i == rounds - 1 {
-      // Final round. Check for result
-      Poll(clients, nservers, sca, 10, 1279200, true)
-    }
+/*     if i == rounds - 1 { */
+/*       // Final round. Check for result */
+/*       Poll(clients, nservers, sca, 10, 1279200, true) */
+/*     } */
 
-    for _, c := range clients {
-      c.Kill()
-      time.Sleep(killSleep[i] * time.Millisecond)
-    }
+/*     for _, c := range clients { */
+/*       c.Kill() */
+/*       time.Sleep(killSleep[i] * time.Millisecond) */
+/*     } */
 
-    // Let it rest
-    time.Sleep(4 * time.Second)
-  }
+/*     // Let it rest */
+/*     time.Sleep(4 * time.Second) */
+/*   } */
 
-  cleanup(coa)
-}
+/*   cleanup(coa) */
+/* } */
 
 func TestSimpleLocalPreReq(t *testing.T) {
 	fmt.Printf("Test: Single Client With Pre Reqs\n")
@@ -603,123 +603,123 @@ func TestMultipleSimpleWithDelayAndPreReqs(t *testing.T) {
   time.Sleep(5 * time.Second)
 }
 
-func TestOOSQuitThenJoinPreReq(t *testing.T) {
-	fmt.Printf("Test: Multiple Clients with OOS Join/Quit and Pre Reqs\n")
-  numTaskReplicas, nservers, numClient := 1, 3, 4;
-  coa, kvh, sca := CreatePreReqCoords(nservers, numTaskReplicas, 0, "unix")
+/* func TestOOSQuitThenJoinPreReq(t *testing.T) { */
+/* 	fmt.Printf("Test: Multiple Clients with OOS Join/Quit and Pre Reqs\n") */
+/*   numTaskReplicas, nservers, numClient := 1, 3, 4; */
+/*   coa, kvh, sca := CreatePreReqCoords(nservers, numTaskReplicas, 0, "unix") */
 
-  // First round
-  clients := CreateClients(numClient, kvh, "unix")
-  for _, c := range clients {
-    time.Sleep(time.Second)
-    go c.Start()
-  }
+/*   // First round */
+/*   clients := CreateClients(numClient, kvh, "unix") */
+/*   for _, c := range clients { */
+/*     time.Sleep(time.Second) */
+/*     go c.Start() */
+/*   } */
 
-  for _, c := range clients {
-    c.Kill()
-    time.Sleep(time.Second)
-  }
+/*   for _, c := range clients { */
+/*     c.Kill() */
+/*     time.Sleep(time.Second) */
+/*   } */
 
-  // Second round
-  clients = CreateClients(numClient, kvh, "unix")
-  for _, c := range clients {
-    time.Sleep(time.Second)
-    go c.Start()
-  }
+/*   // Second round */
+/*   clients = CreateClients(numClient, kvh, "unix") */
+/*   for _, c := range clients { */
+/*     time.Sleep(time.Second) */
+/*     go c.Start() */
+/*   } */
 
-  // Let them work for a bit, then they should be done
-  PollPreReq(clients, nservers, sca, 5, 719400, true)
+/*   // Let them work for a bit, then they should be done */
+/*   PollPreReq(clients, nservers, sca, 5, 719400, true) */
 
-  for _, c := range clients {
-    c.Kill()
-  }
+/*   for _, c := range clients { */
+/*     c.Kill() */
+/*   } */
 
-  cleanup(coa)
+/*   cleanup(coa) */
 
-  // Time to really clear open sockets/files
-  time.Sleep(5 * time.Second)
-}
+/*   // Time to really clear open sockets/files */
+/*   time.Sleep(5 * time.Second) */
+/* } */
 
-func TestMultipleOOSQuitThenJoinPreReq(t *testing.T) {
-	fmt.Printf("Test: Multiple Clients with Multiple OOS Join/Quit w/Pre Reqs\n")
-  numTaskReplicas, nservers := 1, 3;
-  coa, kvh, sca := CreatePreReqCoords(nservers, numTaskReplicas, 0, "unix")
+/* func TestMultipleOOSQuitThenJoinPreReq(t *testing.T) { */
+/* 	fmt.Printf("Test: Multiple Clients with Multiple OOS Join/Quit w/Pre Reqs\n") */
+/*   numTaskReplicas, nservers := 1, 3; */
+/*   coa, kvh, sca := CreatePreReqCoords(nservers, numTaskReplicas, 0, "unix") */
 
-  startSleep := []time.Duration{250, 500, 300, 250, 0}
-  killSleep := []time.Duration{500, 250, 800, 100, 0}
-  numClients := []int{6, 4, 8, 2, 5}
-  rounds := len(startSleep)
-  for i := 0; i < rounds; i++ {
-    clients := CreateClients(numClients[i], kvh, "unix")
-    for _, c := range clients {
-      time.Sleep(startSleep[i] * time.Millisecond)
-      go c.Start()
-    }
+/*   startSleep := []time.Duration{250, 500, 300, 250, 0} */
+/*   killSleep := []time.Duration{500, 250, 800, 100, 0} */
+/*   numClients := []int{6, 4, 8, 2, 5} */
+/*   rounds := len(startSleep) */
+/*   for i := 0; i < rounds; i++ { */
+/*     clients := CreateClients(numClients[i], kvh, "unix") */
+/*     for _, c := range clients { */
+/*       time.Sleep(startSleep[i] * time.Millisecond) */
+/*       go c.Start() */
+/*     } */
 
-    if i == rounds - 1 {
-      // Final round. Check for result
-      PollPreReq(clients, nservers, sca, 10, 719400, true)
-    }
+/*     if i == rounds - 1 { */
+/*       // Final round. Check for result */
+/*       PollPreReq(clients, nservers, sca, 10, 719400, true) */
+/*     } */
 
-    for _, c := range clients {
-      c.Kill()
-      time.Sleep(killSleep[i] * time.Millisecond)
-    }
+/*     for _, c := range clients { */
+/*       c.Kill() */
+/*       time.Sleep(killSleep[i] * time.Millisecond) */
+/*     } */
 
-    // Let it rest
-    time.Sleep(5 * time.Second)
-  }
+/*     // Let it rest */
+/*     time.Sleep(5 * time.Second) */
+/*   } */
 
-  cleanup(coa)
-}
+/*   cleanup(coa) */
+/* } */
 
-func TestSimplePython(t *testing.T) {
-	fmt.Printf("Test: Single Client With Python Coordinator\n")
+/* func TestSimplePython(t *testing.T) { */
+/* 	fmt.Printf("Test: Single Client With Python Coordinator\n") */
 
-  // Set up coordinators and clients
-  numTaskReplicas, nservers, numClient := 1, 3, 1;
-  coa, kvh, sca := CreatePythonCoords(nservers, numTaskReplicas, 0, "unix",
-    "testCoordinator")
-  clients := CreateClients(numClient, kvh, "unix")
+/*   // Set up coordinators and clients */
+/*   numTaskReplicas, nservers, numClient := 1, 3, 1; */
+/*   coa, kvh, sca := CreatePythonCoords(nservers, numTaskReplicas, 0, "unix", */
+/*     "testCoordinator") */
+/*   clients := CreateClients(numClient, kvh, "unix") */
 
-  // Run the computation, timeout in 15 seconds
-  RunPython(clients, nservers, sca, 20, true)
+/*   // Run the computation, timeout in 15 seconds */
+/*   RunPython(clients, nservers, sca, 20, true) */
 
-  // Cleanup the coordinators
-  cleanup(coa)
-}
+/*   // Cleanup the coordinators */
+/*   cleanup(coa) */
+/* } */
 
-func TestMultiplePython(t *testing.T) {
-	fmt.Printf("Test: Multiple Clients, Python Coordinator\n")
+/* func TestMultiplePython(t *testing.T) { */
+/* 	fmt.Printf("Test: Multiple Clients, Python Coordinator\n") */
 
-  // Set up coordinators and clients
-  numTaskReplicas, nservers, numClient := 1, 3, 5;
-  coa, kvh, sca := CreatePythonCoords(nservers, numTaskReplicas, 0, "unix",
-    "testCoordinator")
-  clients := CreateClients(numClient, kvh, "unix")
+/*   // Set up coordinators and clients */
+/*   numTaskReplicas, nservers, numClient := 1, 3, 5; */
+/*   coa, kvh, sca := CreatePythonCoords(nservers, numTaskReplicas, 0, "unix", */
+/*     "testCoordinator") */
+/*   clients := CreateClients(numClient, kvh, "unix") */
 
-  // Run the computation, timeout in 20 seconds
-  RunPython(clients, nservers, sca, 15, true)
+/*   // Run the computation, timeout in 20 seconds */
+/*   RunPython(clients, nservers, sca, 15, true) */
 
-  // Cleanup the coordinators
-  cleanup(coa)
-}
+/*   // Cleanup the coordinators */
+/*   cleanup(coa) */
+/* } */
 
-func TestMultiplePythonTCP(t *testing.T) {
-  fmt.Printf("Test: Multiple Clients, Python Coordinator: TCP\n")
+/* func TestMultiplePythonTCP(t *testing.T) { */
+/*   fmt.Printf("Test: Multiple Clients, Python Coordinator: TCP\n") */
 
-  // Set up coordinators and clients
-  numTaskReplicas, nservers, numClient := 1, 3, 5;
-  coa, kvh, sca := CreatePythonCoords(nservers, numTaskReplicas, 0, "tcp",
-    "testCoordinator")
-  clients := CreateClients(numClient, kvh, "tcp")
+/*   // Set up coordinators and clients */
+/*   numTaskReplicas, nservers, numClient := 1, 3, 5; */
+/*   coa, kvh, sca := CreatePythonCoords(nservers, numTaskReplicas, 0, "tcp", */
+/*     "testCoordinator") */
+/*   clients := CreateClients(numClient, kvh, "tcp") */
 
-  // Run the computation, timeout in 15 seconds
-  RunPython(clients, nservers, sca, 20, true)
+/*   // Run the computation, timeout in 15 seconds */
+/*   RunPython(clients, nservers, sca, 20, true) */
 
-  // Cleanup the coordinators
-  cleanup(coa)
-}
+/*   // Cleanup the coordinators */
+/*   cleanup(coa) */
+/* } */
 
 func TestMonteCarlo(t *testing.T) {
   fmt.Printf("Test: Monte Carlo\n")
@@ -731,45 +731,45 @@ func TestMonteCarlo(t *testing.T) {
   clients := CreateCustomClients(numClient, kvh, "unix", "mcNode")
 
   // Run the computation, timeout in 10 seconds
-  RunPython(clients, nservers, sca, 15, false)
+  RunPython(clients, nservers, sca, 60, false)
 
   // Cleanup the coordinators
   cleanup(coa)
 }
 
 
-func TestMapReducePython(t *testing.T) {
-  fmt.Printf("Test: MapReduce Reverse Index\n")
+/* func TestMapReducePython(t *testing.T) { */
+/*   fmt.Printf("Test: MapReduce Reverse Index\n") */
 
-  // Set up coordinators and clients
-  numTaskReplicas, nservers, numClient := 1, 3, 1
-  coa, kvh, sca := CreateMapReduceCoords(nservers, numTaskReplicas, 0,
-    "tcp", "mrCoord")
-  clients := CreateMapReduceClients(numClient, kvh, "tcp", "mrReverseIndexNode")
+/*   // Set up coordinators and clients */
+/*   numTaskReplicas, nservers, numClient := 1, 3, 1 */
+/*   coa, kvh, sca := CreateMapReduceCoords(nservers, numTaskReplicas, 0, */
+/*     "tcp", "mrCoord") */
+/*   clients := CreateMapReduceClients(numClient, kvh, "tcp", "mrReverseIndexNode") */
 
-  // Run the computation, timeout in 10 seconds
-  RunPythonCustom(clients, nservers, sca, 60, false, 22222)
+/*   // Run the computation, timeout in 10 seconds */
+/*   RunPythonCustom(clients, nservers, sca, 60, false, 22222) */
 
-  // Cleanup the coordinators
-  cleanup(coa)
-}
+/*   // Cleanup the coordinators */
+/*   cleanup(coa) */
+/* } */
 
-// Uncomment this if you include your s3 credentials in private.py
-func TestMapReduceS3(t *testing.T) {
-  fmt.Printf("Test: MapReduce Reverse Index on S3\n")
+/* // Uncomment this if you include your s3 credentials in private.py */
+/* func TestMapReduceS3(t *testing.T) { */
+/*   fmt.Printf("Test: MapReduce Reverse Index on S3\n") */
 
-  // Set up coordinators and clients
-  numTaskReplicas, nservers, numClient := 1, 1, 1
-  coa, kvh, sca := CreateMapReduceS3Coords(nservers, numTaskReplicas, 0,
-    "tcp", "mrCoord")
-  clients := CreateMapReduceS3Clients(numClient, kvh, "tcp", "mrReverseIndexNode")
+/*   // Set up coordinators and clients */
+/*   numTaskReplicas, nservers, numClient := 1, 1, 1 */
+/*   coa, kvh, sca := CreateMapReduceS3Coords(nservers, numTaskReplicas, 0, */
+/*     "tcp", "mrCoord") */
+/*   clients := CreateMapReduceS3Clients(numClient, kvh, "tcp", "mrReverseIndexNode") */
 
-  // Run the computation, timeout in 10 seconds
-  RunPythonCustom(clients, nservers, sca, 60, false, 22222)
+/*   // Run the computation, timeout in 10 seconds */
+/*   RunPythonCustom(clients, nservers, sca, 60, false, 22222) */
 
-  // Cleanup the coordinators
-  cleanup(coa)
-}
+/*   // Cleanup the coordinators */
+/*   cleanup(coa) */
+/* } */
 
 /* func TestTaskReplication(t *testing.T) { */
 /* 	fmt.Printf("Test: Task Replication with leaving clients\n") */
