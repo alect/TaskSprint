@@ -3,7 +3,7 @@ from TaskSprintNode import *
 import random
 
 class MonteCarloNode(TaskSprintNode):
-  @timeout(5)
+  @timeout(10)
   def process(self):
     while True:
       x, y = random.random(), random.random()

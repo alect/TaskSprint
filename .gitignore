@@ -108,3 +108,7 @@ nosetests.xml
 
 # Private module
 *private.py
+
+# Deployment configuration
+deploy/cfg.py
+deploy/*.pem
