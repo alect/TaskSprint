@@ -738,6 +738,35 @@ func TestMonteCarlo(t *testing.T) {
 }
 
 
+func TestRejoin(t *testing.T) {
+	fmt.Printf("Test: Leave then rejoin\n")
+
+	numTaskReplicas, nservers, numClient := 1, 3, 3
+	coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "tcp")
+
+	clients := CreateClients(numClient, kvh, "tcp")
+	for _, c := range clients {
+		fmt.Printf("CLient ID: %v\n", c.GetID())
+	}
+	Run(clients, nservers, sca, 2, false)
+	
+	fmt.Printf("Killing....\n")
+	time.Sleep(12 * time.Second)
+	fmt.Printf("Rejoining....\n")
+	
+	// Create clients with the same client IDs after they're dead
+	clients_2 := CreateClients(numClient, kvh, "tcp")
+	for i, c := range clients_2 {
+		c.SetID(clients[i].GetID())
+	}
+
+	Run(clients_2, nservers, sca, 30, true)
+
+	cleanup(coa)
+
+}
+
+
 func TestMapReducePython(t *testing.T) {
   fmt.Printf("Test: MapReduce Reverse Index\n")
 
@@ -755,7 +784,10 @@ func TestMapReducePython(t *testing.T) {
 }
 
 
+
 // Uncomment this if you include your s3 credentials in private.py
+
+/*
 func TestMapReduceS3(t *testing.T) {
   fmt.Printf("Test: MapReduce Reverse Index on S3\n")
 
@@ -766,11 +798,13 @@ func TestMapReduceS3(t *testing.T) {
   clients := CreateMapReduceS3Clients(numClient, kvh, "tcp", "mrReverseIndexNode")
 
   // Run the computation, timeout in 10 seconds
-  RunPythonCustom(clients, nservers, sca, 60, false, 22222)
+  RunPythonCustom(clients, nservers, sca, 240, false, 22222)
 
   // Cleanup the coordinators
   cleanup(coa)
 }
+*/
+
 
 /* func TestTaskReplication(t *testing.T) { */
 /* 	fmt.Printf("Test: Task Replication with leaving clients\n") */

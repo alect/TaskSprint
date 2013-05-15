@@ -1,6 +1,7 @@
 package coordinator 
 
 import "log"
+import "fmt"
 
 type TestCoord struct {
 	currentTask TaskID
@@ -26,11 +27,12 @@ func (sc *TestCoord) Init(co *Coordinator, seed int64) {
 
 func (sc *TestCoord) ClientJoined(co *Coordinator, CID ClientID, NumNodes int) {
 	// Do nothing for now 
+	fmt.Printf("Client joined: %v\n", CID)
 }
 
 func (sc *TestCoord) ClientDead(co *Coordinator, CID ClientID) {
 	// Do nothing for now 
-	//fmt.Printf("Client marked dead: %v\n", CID)
+	fmt.Printf("Client marked dead: %v\n", CID)
 }
 
 func (sc *TestCoord) goPy(co *Coordinator, name string, args []int, taskType int) {

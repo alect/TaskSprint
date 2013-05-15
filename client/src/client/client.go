@@ -77,6 +77,16 @@ type GetDataReply struct {
 	Data interface{}
 }
 
+// FOR TESTING ONLY
+func (c *Client) SetID(cid coordinator.ClientID) {
+	c.id = cid
+	c.clerk.SetID(cid)
+}
+
+func (c *Client) GetID() coordinator.ClientID {
+	return c.id
+}
+
 func (c *Client) GetData(args *GetDataArgs, reply *GetDataReply) error {
   id, key := args.TaskId, args.Key
   reply.Data = c.tasks[id].data[key]

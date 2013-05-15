@@ -21,6 +21,10 @@ func MakeClerk(servers[]string, me string, numNodes int, id ClientID, socktype s
 	return ck
 } 
 
+// FOR TESTING ONLY
+func (ck *Clerk) SetID(cid ClientID) {
+	ck.clerkID = cid
+}
 
 // RPC call function 
 func call(srv string, rpcname string, args interface{}, reply interface{}, socktype string) bool { 
