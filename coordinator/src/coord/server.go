@@ -133,14 +133,12 @@ func (co *Coordinator) WaitForPaxos(seq int, startFakeInst bool) Op {
 // Function that will apply an op assuming all previous ops in the log have been applied 
 // Returns a view primarily for the sake of Query calls
 func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View { 
-	// Only lock when we're applying ops 
-	co.mu.Lock() 
-	defer co.mu.Unlock()
+	
 	
 	if (op.Op == NIL || seq <= co.currentSeq) {
 		return co.currentView
 	}
-	fmt.Printf("Applying Op: %v\n", op.Op)
+	//fmt.Printf("Applying Op: %v\n", op.Op)
 	oldViewNum := co.currentView.ViewNum
 	co.currentSeq = seq
 	// First, see if we need to initialize everything 
@@ -232,6 +230,10 @@ func (co *Coordinator) ApplyPaxosOp (seq int, op Op) View {
 
 // Function for driving the paxos log forward if we've lagged a bit 
 func (co *Coordinator) UpdatePaxos() {
+	// Only lock when we're updating paxos
+	co.mu.Lock() 
+	defer co.mu.Unlock()
+
 	max := co.px.Max()
 	for seq := co.px.Min(); seq <= max && !co.dead; seq++ {
 		oldOp := co.WaitForPaxos(seq, true)
@@ -243,6 +245,10 @@ func (co *Coordinator) UpdatePaxos() {
 // Function that attempts to insert an op into the paxos log and 
 // applies each op as it's discovered 
 func (co *Coordinator) PerformPaxos(op Op) View {
+	// Only lock when we're updating paxos
+	co.mu.Lock() 
+	defer co.mu.Unlock()
+
 	// First, catch up if necessary
 	max := co.px.Max()
 	for seq := co.px.Min(); seq <= max && !co.dead; seq++ {
@@ -383,20 +389,20 @@ func (co *Coordinator) ClientDead(CID ClientID) {
 
 // When a client wants the latest view
 func (co *Coordinator) Query(args *QueryArgs, reply *QueryReply) error { 
-	fmt.Printf("Coord receiving query from %v\n", args.CID)
+	//fmt.Printf("Coord receiving query from %v\n", args.CID)
 	op := Op { Op: QUERY, CID: args.CID, Contact: args.Contact, NumNodes: args.NumNodes }
 	result := co.PerformPaxos(op)
 	reply.View = result
-	fmt.Printf("Coord returning query from %v\n", args.CID)
+	//fmt.Printf("Coord returning query from %v\n", args.CID)
 	return nil 
 } 
 
 // When a client has finished a task 
 func (co *Coordinator) TaskDone(args *DoneArgs, reply *DoneReply) error {
-	fmt.Printf("Coord receiving done from %v\n", args.CID)
+	//fmt.Printf("Coord receiving done from %v\n", args.CID)
 	op := Op { Op: DONE, CID: args.CID, TID: args.TID, DoneValues: args.DoneValues }
 	co.PerformPaxos(op)
-	fmt.Printf("Coord returning done from %v\n", args.CID)
+	//fmt.Printf("Coord returning done from %v\n", args.CID)
 	return nil
 } 
 
@@ -536,9 +542,9 @@ func MakeServer(servers []string, me int, dc DeveloperCoord, numTaskReplicas int
 			if err != nil && !co.dead { 
 				fmt.Printf("Coordinator(%v) accept: %v\n", me, err.Error())
 				co.Kill()
-			} 
-		} 
-	}() 
+			}
+		}
+	}()
 
 	return co
 } 
