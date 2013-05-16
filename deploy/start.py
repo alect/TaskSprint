@@ -52,8 +52,9 @@ def refresh_and_build(address):
           run("mkdir bin")
           run("go build -o bin/client client/src/client/client.go")
           run("go build -o bin/coordinator coordinator/src/coord/main/coord.go")
-          run(link_library("client/TaskSprintNode.py"))
-          run(link_library("coordinator/TaskSprintCoordinator.py"))
+          run(link_library("python/client/TaskSprintNode.py"))
+          run(link_library("python/coordinator/TaskSprintCoordinator.py"))
+          run(link_library("python/jsonify.py"))
           break
         except NetworkError:
           time.sleep(2)
@@ -62,7 +63,7 @@ def refresh_and_build(address):
 
 def link_library(path):
   split = string.split(path, "/")
-  return "ln -s libraries/python/%s deploy/%s" %(path, split[len(split) - 1])
+  return "ln -s ~/TaskSprint/libraries/%s deploy/%s" %(path, split[len(split) - 1])
 
 def setup(address, program_path, program_name):
   refresh_and_build(address)
