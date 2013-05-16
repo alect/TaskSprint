@@ -73,23 +73,27 @@ def setup_coordinator(i, servers, program, deploy_dir):
   print "Initializing coordinator."
   addresses = string.split(servers, ",")
   address = addresses[i]
-  program_path = get_program_path(program, deploy_dir)
-  setup(address, program_path, program)
+  program_path, program_name = get_program_path(program, deploy_dir)
+  setup(address, program_path, program_name)
 
   addresses[i] = "0.0.0.0"
   servers = string.join(addresses, port + ",") + port
-  start_coordinator(address, servers, i, program)
+  start_coordinator(address, servers, i, program_name)
 
 def setup_client(address, servers, program, deploy_dir):
   print "Initializing client."
-  program_path = get_program_path(program, deploy_dir)
-  setup(address, program_path, program)
-  start_client(address, servers, program)
+  program_path, program_name = get_program_path(program, deploy_dir)
+  setup(address, program_path, program_name)
+  start_client(address, servers, program_name)
 
 def get_program_path(program, deploy_dir):
+  name = program
+  if program.index("/") != -1:
+    split = string.split(program, "/")
+    name = split[len(split) - 1]
   if program.startswith("/") or program.startswith("~"):
-    return program
-  return deploy_dir + "/" + program
+    return program, name
+  return deploy_dir + "/" + program, name
 
 if __name__ == "__main__":
   if len(sys.argv) != 6:
