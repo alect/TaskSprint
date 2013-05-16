@@ -2,6 +2,7 @@
 
 import time
 import json
+import random
 
 import sys
 sys.path.append("libraries/python")
@@ -13,21 +14,28 @@ from bitcoin_miner_lib import *
 
 class BitcoinMinerNode(TaskSprintNode):
     def mine(self, *params):
+        block_template = json.loads(params[0])
+        mining_params = json.loads(params[1])
+
+        print "Starting mining with params:", mining_params
+
+        mined_block, hps = block_mine(block_template, mining_params['coinbase_message'], random.getrandbits(32), mining_params['address'], timeout=mining_params['mine_timeout'], debugnonce_start=mining_params['debugnonce_start'])
+
+        print "Done mining!"
+
+        if mined_block == None: result = None
+        else: result = mined_block['hash']
+
+        return {'result': result, 'mined_block': json.dumps(mined_block), 'hps': hps}
+
+    def bitcoind_getblocktemplate(self, *params):
         params = json.loads(params[0])
 
-        mined_block, hps = block_mine(params['block_template'], params['coinbase_message'], params['extranonce_start'], params['address'], timeout=params['mine_timeout'], debugnonce_start=params['debugnonce_start'])
+        time.sleep(params['duration'])
+        print "Getting new block template..."
 
-        return {'mined_block': json.dumps(mined_block), 'hps': hps}
-
-    def bitcoind_getblocktemplate(self):
         block_template = rpc_getblocktemplate()
-        return {'block_template': json.dumps(block_template)}
-
-    def bitcoind_wait(self, *params):
-        duration = params[0]
-        print "I am waiting for", duration
-        time.sleep(duration)
-        return {}
+        return {'block_template': json.dumps(block_template), 'mining_params': json.dumps(params['mining_params'])}
 
     def bitcoind_submit(self, *params):
         mined_block = json.loads(params[0])
