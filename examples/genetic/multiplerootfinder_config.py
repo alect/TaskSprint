@@ -12,7 +12,7 @@ params = {
         'resolution':   32,
 
         # Solution epsilon (float)
-        'solution_epsilon':   0.0001,
+        'solution_epsilon':   0.001,
         # Cluster epsilon (float)
         'cluster_epsilon':     0.20,
         # Crossover epsilon (float)
@@ -36,7 +36,7 @@ params = {
 
     'run_params': {
         # Max number of GAs to execute total (int)
-        'runtime':      100,
+        'runtime':      110,
         # Max number of GAs at any given time (int)
         'concurrent':   20,
     },
