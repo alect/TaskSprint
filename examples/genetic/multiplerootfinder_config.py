@@ -38,6 +38,6 @@ params = {
         # Max number of GAs to execute total (int)
         'runtime':      110,
         # Max number of GAs at any given time (int)
-        'concurrent':   20,
+        'concurrent':   16,
     },
 }
