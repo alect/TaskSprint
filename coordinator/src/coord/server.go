@@ -71,7 +71,7 @@ const (
 
 const ELECTION_INTERVAL = 5 * time.Second
 
-const DEAD_TICKS = 12 // Approximately 3 seconds
+const DEAD_TICKS = 20 // Approximately 5 seconds
 
 type PaxosReply struct { 
 	View View
