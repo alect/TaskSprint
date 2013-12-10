@@ -1,4 +1,4 @@
-package main
+package clientlib
 
 import "time"
 import "coord"

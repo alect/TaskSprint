@@ -3,23 +3,23 @@ TaskSprint (Name Not Finalized)
 
 Introduction
 --------------
-TaskSprint is a general-purpose, fault-tolerant,
-distributed system for deterministic and non-deterministic computation.
-TaskSprint differentiates itself from existing systems, like MapReduce and Pig,
-by allowing non-deterministic computations, allowing arbitrary stage
-computations (as opposed to two in MapReduce), having no central point of
-failure (as opposed to Pig/MapReduce's master), being language agnostic, and
-being computation agnostic.
+TaskSprint is a general-purpose, fault-tolerant, distributed system for
+deterministic and non-deterministic computation. TaskSprint differentiates
+itself from existing systems, like MapReduce and Pig, by allowing
+non-deterministic computations, allowing arbitrary stage computations (as
+opposed to two in MapReduce), having no central point of failure (as opposed to
+Pig/MapReduce's master), being language agnostic, and being computation
+agnostic.
 
 TaskSprint's core challenge is to provide all of these facilities in a
 fault-tolerant manner while exposing minimal complexity to the user. To this
 end, TaskSprint's only requirement from the user are two small pieces of
 software: a scheduler and a node. The scheduler's job is to define a schedule
 for tasks, and the node's job is implement those tasks. All the intermediate
-  work is handled by the system. This includes distributing and replicating the
-  computation across nodes in the network, handling data shuffling efficiently,
-  handling task dependencies, and dealing with scheduler, node, and network
-  failures.
+work is handled by the system. This includes distributing and replicating the
+computation across nodes in the network, handling data shuffling efficiently,
+handling task dependencies, and dealing with scheduler, node, and network
+failures.
 
 Design
 ----------------
@@ -193,7 +193,7 @@ provided a script in {path}/TaskSprint/client called runCoord.sh that does this:
     ./runClient.sh
 
 You should see clients joining in the coordinator output. If everything is
-successful, you will see:
+successful, you will see something akin to the following:
 
 * Task 23 is done. Result: {'result': 3.1412252699427192}
 
