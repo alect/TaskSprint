@@ -158,19 +158,23 @@ where {path} is the path to the TaskSprint code directory.
 Next, you'll need to build both the client and the coordinator code. 
 
 To build the client:
+    
     cd {path}/TaskSprint/client
     go install client
 
 To build the coordinator:
+    
     cd {path}/TaskSprint/client
     go install coord/main
 
 You should now have two executable binaries: 
-  {path}/TaskSprint/client/bin/client
-  {path}/TaskSprint/coord/bin/main
+
+  * {path}/TaskSprint/client/bin/client
+  * {path}/TaskSprint/coord/bin/main
 
 You'll need the jsonpickle Python module for the next steps. To install it,
 ensure you have Python and pip installed, then simply run:
+    
     sudp pip install jsonpickle
 
 To run the sample MonteCarlo code provided above, perform the following actions:
@@ -178,21 +182,25 @@ To run the sample MonteCarlo code provided above, perform the following actions:
 First, launch some coordinators that are running the Monte Carlo scheduler
 code. We have provided a script in {path}/TaskSprint/coordinator called
 runCoord.sh that does this:
+    
     cd {path}/TaskSprint/coordinator
     ./runCoord.sh
 
 Next, launch a client that is running the Monte Carlo node code. We have
 provided a script in {path}/TaskSprint/client called runCoord.sh that does this:
+    
     cd {path}/TaskSprint/client
     ./runClient.sh
 
 You should see clients joining in the coordinator output. If everything is
 successful, you will see:
-  Task 23 is done. Result: {'result': 3.1412252699427192}
+
+* Task 23 is done. Result: {'result': 3.1412252699427192}
 
 Sidenote
 --------------------
 You will likely need to kill previous instantiations of coordinators and client
 to free up TCP ports. The following commands may be helpful:
-    kill -9 $(pgrep -f bin/main)
-    kill -9 $(pgrep python)
+
+* kill -9 $(pgrep -f bin/main)
+* kill -9 $(pgrep python)
