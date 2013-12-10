@@ -348,35 +348,35 @@ st string, program string) []*Client {
   return clients
 }
 
-/* func TestSimple(t *testing.T) { */
-/*   fmt.Printf("Test: Single Client\n") */
+func TestSimple(t *testing.T) {
+  fmt.Printf("Test: Single Client\n")
 
-/*   // Set up coordinators and clients */
-/*   numTaskReplicas, nservers, numClient := 1, 3, 1; */
-/*   coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "unix") */
-/*   clients := CreateClients(numClient, kvh, "unix") */
+  // Set up coordinators and clients
+  numTaskReplicas, nservers, numClient := 1, 3, 1;
+  coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "unix")
+  clients := CreateClients(numClient, kvh, "unix")
 
-/*   // Run the computation, timeout in 15 seconds */
-/*   Run(clients, nservers, sca, 15, true) */
+  // Run the computation, timeout in 15 seconds
+  Run(clients, nservers, sca, 15, true)
 
-/*   // Cleanup the coordinators */
-/*   cleanup(coa) */
-/* } */
+  // Cleanup the coordinators
+  cleanup(coa)
+}
 
-/* func TestSimpleTCP(t *testing.T) { */
-/*   fmt.Printf("Test: Single Client: TCP\n") */
+func TestSimpleTCP(t *testing.T) {
+  fmt.Printf("Test: Single Client: TCP\n")
 
-/*   // Set up coordinators and clients */
-/*   numTaskReplicas, nservers, numClient := 1, 3, 1; */
-/*   coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "tcp") */
-/*   clients := CreateClients(numClient, kvh, "tcp") */
+  // Set up coordinators and clients
+  numTaskReplicas, nservers, numClient := 1, 3, 1;
+  coa, kvh, sca := CreateCoords(nservers, numTaskReplicas, 0, "tcp")
+  clients := CreateClients(numClient, kvh, "tcp")
 
-/*   // Run the computation, timeout in 15 seconds */
-/*   Run(clients, nservers, sca, 30, true) */
+  // Run the computation, timeout in 15 seconds
+  Run(clients, nservers, sca, 30, true)
 
-/*   // Cleanup the coordinators */
-/*   cleanup(coa) */
-/* } */
+  // Cleanup the coordinators
+  cleanup(coa)
+}
 
 /* func TestMultipleSimple(t *testing.T) { */
 /* 	fmt.Printf("Test: Multiple Clients\n") */
