@@ -38,5 +38,5 @@ Node.prototype.merge = function(results) {
 onmessage = function(msg) {
   console.log("Got message from spawner:", msg.data);
   var node = new Node();
-  postMessage(node.montecarlo());
+  postMessage(node[msg.data[0]](msg.data[1]));
 }

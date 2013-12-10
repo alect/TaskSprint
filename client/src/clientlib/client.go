@@ -69,7 +69,7 @@ type Client struct {
 }
 
 type GetDataArgs struct {
-	Key string
+  Key string
   TaskId coordinator.TaskID
 }
 

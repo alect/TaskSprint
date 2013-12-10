@@ -3,7 +3,7 @@ from TaskSprintCoordinator import *
 
 class MonteCarloCoordinator(TaskSprintCoordinator):
   def init(self, seed):
-    alltasks = [self.start_task(name = "montecarlo") for i in xrange(23)]
+    alltasks = [self.start_task(name = "montecarlo") for i in xrange(10)]
 
     self.final = self.start_task(
       name = "merge",
